@@ -1,0 +1,7 @@
+{
+  "name": "CloudGuard Update Monitor",
+  "description": "An automated dashboard that monitors Azure and Microsoft 365 updates daily, providing AI-powered summaries and email export capabilities using Gemini Google Search grounding.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

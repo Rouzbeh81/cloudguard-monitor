@@ -1,16 +1,17 @@
-
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { CloudUpdate, SummaryReport } from "../types";
 
+// Using gemini-3-flash-preview for efficient summarization and information retrieval tasks
 const MODEL_NAME = 'gemini-3-flash-preview';
 const MAX_RETRIES = 2;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export const fetchCloudUpdates = async (retryCount = 0): Promise<SummaryReport> => {
+  // Initialize GoogleGenAI directly with process.env.API_KEY as per guidelines.
+  // The key is assumed to be provided by the environment.
   const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
   
-  // Use a query that's broad enough to always get results but focused enough for the tool
   const searchPrompt = "official recent updates and roadmap announcements for Microsoft Azure and Microsoft 365 from the last 7 days";
   
   const systemInstruction = `
@@ -32,14 +33,17 @@ export const fetchCloudUpdates = async (retryCount = 0): Promise<SummaryReport> 
       contents: searchPrompt,
       config: {
         systemInstruction: systemInstruction,
+        // Using Google Search grounding to find the latest cloud updates
         tools: [{ googleSearch: {} }],
         temperature: 0.2, 
       },
     });
 
+    // Access the text property directly (it is a getter, not a method)
     const text = response.text || "";
     if (!text) throw new Error("Empty response from intelligence service.");
 
+    // Extract grounding chunks to display source URLs as required for Google Search grounding
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const sources = chunks
       .filter(chunk => chunk.web)
@@ -49,8 +53,6 @@ export const fetchCloudUpdates = async (retryCount = 0): Promise<SummaryReport> 
       }));
 
     const keyUpdates = parseUpdatesFromText(text);
-    
-    // If parsing failed to find structured items, we try a fallback more aggressive parse
     const finalUpdates = keyUpdates.length > 0 ? keyUpdates : createFallbackUpdates(text);
 
     return {
@@ -62,6 +64,7 @@ export const fetchCloudUpdates = async (retryCount = 0): Promise<SummaryReport> 
   } catch (error: any) {
     console.error(`Sync Attempt ${retryCount + 1} failed:`, error);
     
+    // Implement graceful retry logic for service errors
     if (retryCount < MAX_RETRIES && (error.status === 500 || error.message?.includes('500') || error.message?.includes('INTERNAL'))) {
       await sleep(1000 * (retryCount + 1));
       return fetchCloudUpdates(retryCount + 1);
@@ -73,7 +76,6 @@ export const fetchCloudUpdates = async (retryCount = 0): Promise<SummaryReport> 
 
 const extractExecutiveSummary = (text: string): string => {
   const sections = text.split(/\n+/).filter(s => s.trim().length > 30);
-  // Look for the first section that isn't a list item
   const summary = sections.find(s => !s.trim().startsWith('[') && !s.trim().match(/^\d+\./) && !s.trim().startsWith('*'));
   return summary ? summary.trim() : "Digest of recent infrastructure and productivity service updates from Microsoft.";
 };
@@ -84,7 +86,6 @@ const parseUpdatesFromText = (text: string): CloudUpdate[] => {
   
   for (let line of lines) {
     line = line.trim();
-    // Look for the bracketed category pattern: [Category]: Title - Status - Description
     const match = line.match(/^\[?(Azure|M365|Security)\]?:\s*(.*?)\s*-\s*(General Availability|Public Preview|Development|Retired)?\s*-\s*(.*)/i);
     
     if (match) {
@@ -98,7 +99,6 @@ const parseUpdatesFromText = (text: string): CloudUpdate[] => {
         url: '#'
       });
     } else {
-      // Secondary fallback per-line parser for more relaxed formats
       const relaxedMatch = line.match(/^[\*\-\d\.]*\s*\*\*?(Azure|M365|Security)\*\*?:\s*(.*)/i);
       if (relaxedMatch) {
         updates.push({
@@ -117,7 +117,6 @@ const parseUpdatesFromText = (text: string): CloudUpdate[] => {
 };
 
 const createFallbackUpdates = (text: string): CloudUpdate[] => {
-  // If structured parsing fails, split by bullet points and try to extract anything
   const bullets = text.split(/\n[\*\-\•]|\n\d+\./).filter(b => b.trim().length > 20);
   return bullets.slice(0, 6).map((b, i) => {
     const clean = b.replace(/\*\*+/g, '').trim();

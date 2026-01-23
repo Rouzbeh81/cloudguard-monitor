@@ -19,8 +19,31 @@ const App: React.FC = () => {
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [automationTriggered, setAutomationTriggered] = useState(false);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
+
+  const checkApiKey = useCallback(() => {
+    let key = "";
+    const stored = localStorage.getItem('cloudguard_alerts');
+    if (stored) {
+      try {
+        const settings = JSON.parse(stored);
+        key = settings.geminiApiKey || "";
+      } catch (e) {}
+    }
+
+    if (!key) {
+      key = process.env.API_KEY || "";
+    }
+
+    setApiKeyMissing(!key);
+    return !!key;
+  }, []);
 
   const loadData = useCallback(async (isAutomated = false) => {
+    if (!checkApiKey()) {
+      setState(prev => ({ ...prev, error: "Gemini API Key is missing. Please configure it in settings." }));
+      return;
+    }
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const report = await fetchCloudUpdates();
@@ -80,6 +103,7 @@ const App: React.FC = () => {
 
   // Automated Schedule Checker
   useEffect(() => {
+    checkApiKey();
     const checkSchedule = () => {
       const storedAlerts = localStorage.getItem('cloudguard_alerts');
       if (!storedAlerts) return;
@@ -173,12 +197,22 @@ const App: React.FC = () => {
         </div>
 
         {state.error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700">
-            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-semibold">Sync Failed</p>
-              <p className="text-sm opacity-90">{state.error}</p>
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold">Action Required</p>
+                <p className="text-sm opacity-90">{state.error}</p>
+              </div>
             </div>
+            {apiKeyMissing && (
+              <button
+                onClick={() => setIsAlertsOpen(true)}
+                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-colors"
+              >
+                Configure Key
+              </button>
+            )}
           </div>
         )}
 
@@ -207,7 +241,10 @@ const App: React.FC = () => {
 
       {isAlertsOpen && (
         <AlertsModal 
-          onClose={() => setIsAlertsOpen(false)} 
+          onClose={() => {
+            setIsAlertsOpen(false);
+            checkApiKey();
+          }}
         />
       )}
     </div>

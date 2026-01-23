@@ -1,8 +1,8 @@
 import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { CloudUpdate, SummaryReport } from "../types";
 
-// Using gemini-1.5-flash for efficient summarization and free tier availability
-const MODEL_NAME = 'gemini-1.5-flash';
+// Using gemini-2.0-flash for latest features and search grounding support
+const MODEL_NAME = 'gemini-2.0-flash';
 const MAX_RETRIES = 2;
 
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
@@ -62,19 +62,18 @@ export const fetchCloudUpdates = async (retryCount = 0): Promise<SummaryReport> 
   `;
 
   try {
+    // In @google/genai SDK, generateContent is called on ai.models
     const response: GenerateContentResponse = await ai.models.generateContent({
       model: MODEL_NAME,
-      contents: searchPrompt,
+      contents: [{ role: 'user', parts: [{ text: searchPrompt }] }],
       config: {
-        systemInstruction: systemInstruction,
-        // Using Google Search grounding to find the latest cloud updates
-        tools: [{ googleSearch: {} }] as any,
+        systemInstruction: { parts: [{ text: systemInstruction }] },
+        tools: [{ googleSearch: {} }],
         temperature: 0.2, 
         responseMimeType: "application/json",
       },
     });
 
-    // Access the text property directly
     const text = response.text || "";
     if (!text) throw new Error("Empty response from intelligence service.");
 

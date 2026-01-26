@@ -62,10 +62,25 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
     Return ONLY valid JSON.
   `;
 
-  if (provider === 'gemini') {
-    return handleGemini(geminiKey || "", systemInstruction, retryCount, options);
-  } else {
-    return handleGroq(groqKey || "", systemInstruction, retryCount, options);
+  try {
+    if (provider === 'gemini') {
+      return await handleGemini(geminiKey || "", systemInstruction, retryCount, options);
+    } else {
+      return await handleGroq(groqKey || "", systemInstruction, retryCount, options);
+    }
+  } catch (error: any) {
+    // Transparent fallback: If Gemini fails due to quota/rate limits and we have a Groq key, try Groq.
+    const isQuotaError = error.message?.toLowerCase().includes('quota') ||
+                        error.message?.toLowerCase().includes('429') ||
+                        error.message?.toLowerCase().includes('limit') ||
+                        error.message?.toLowerCase().includes('exhausted');
+
+    if (provider === 'gemini' && groqKey && isQuotaError) {
+      console.warn("Gemini quota exceeded or rate limited. Falling back to Groq...");
+      return await handleGroq(groqKey, systemInstruction, 0, options);
+    }
+
+    throw error;
   }
 };
 

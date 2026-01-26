@@ -24,8 +24,8 @@ const App: React.FC = () => {
 
   const checkApiKey = useCallback(() => {
     const stored = localStorage.getItem('cloudguard_alerts');
-    const hasGeminiEnv = !!process.env.API_KEY;
-    const hasGroqEnv = !!process.env.GROQ_API_KEY;
+    const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
+    const hasGroqEnv = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined";
 
     if (!stored) {
       setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
@@ -37,8 +37,8 @@ const App: React.FC = () => {
       const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
       const provider = settings.aiProvider || defaultProvider;
       const key = provider === 'gemini'
-        ? (settings.geminiApiKey || process.env.API_KEY)
-        : (settings.groqApiKey || process.env.GROQ_API_KEY);
+        ? (settings.geminiApiKey || (hasGeminiEnv ? process.env.API_KEY : undefined))
+        : (settings.groqApiKey || (hasGroqEnv ? process.env.GROQ_API_KEY : undefined));
 
       setApiKeyMissing(!key);
       return !!key;
@@ -61,16 +61,17 @@ const App: React.FC = () => {
       return;
     }
 
-    const hasGeminiEnv = !!process.env.API_KEY;
-    const hasGroqEnv = !!process.env.GROQ_API_KEY;
+    const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
+    const hasGroqEnv = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined";
     const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
 
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
+      // Always pass both keys (from settings OR env) to enable transparent fallback in the service layer
       const report = await fetchCloudUpdates({
         provider: settings.aiProvider || defaultProvider,
-        geminiKey: settings.geminiApiKey || process.env.API_KEY,
-        groqKey: settings.groqApiKey || process.env.GROQ_API_KEY
+        geminiKey: settings.geminiApiKey || (hasGeminiEnv ? process.env.API_KEY : undefined),
+        groqKey: settings.groqApiKey || (hasGroqEnv ? process.env.GROQ_API_KEY : undefined)
       });
 
       const syncTime = new Date().toISOString();

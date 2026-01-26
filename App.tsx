@@ -16,6 +16,7 @@ const App: React.FC = () => {
     report: null
   });
 
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [automationTriggered, setAutomationTriggered] = useState(false);
@@ -23,23 +24,27 @@ const App: React.FC = () => {
 
   const checkApiKey = useCallback(() => {
     const stored = localStorage.getItem('cloudguard_alerts');
+    const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
+    const hasGroqEnv = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined";
+
     if (!stored) {
-      setApiKeyMissing(!process.env.API_KEY);
-      return !!process.env.API_KEY;
+      setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
+      return hasGeminiEnv || hasGroqEnv;
     }
 
     try {
       const settings = JSON.parse(stored);
-      const provider = settings.aiProvider || 'gemini';
+      const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
+      const provider = settings.aiProvider || defaultProvider;
       const key = provider === 'gemini'
-        ? (settings.geminiApiKey || process.env.API_KEY)
-        : settings.groqApiKey;
+        ? (settings.geminiApiKey || (hasGeminiEnv ? process.env.API_KEY : undefined))
+        : (settings.groqApiKey || (hasGroqEnv ? process.env.GROQ_API_KEY : undefined));
 
       setApiKeyMissing(!key);
       return !!key;
     } catch (e) {
-      setApiKeyMissing(!process.env.API_KEY);
-      return !!process.env.API_KEY;
+      setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
+      return hasGeminiEnv || hasGroqEnv;
     }
   }, []);
 
@@ -56,13 +61,26 @@ const App: React.FC = () => {
       return;
     }
 
+    const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
+    const hasGroqEnv = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined";
+    const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
+      // Always pass both keys (from settings OR env) to enable transparent fallback in the service layer
       const report = await fetchCloudUpdates({
-        provider: settings.aiProvider || 'gemini',
-        geminiKey: settings.geminiApiKey || process.env.API_KEY,
-        groqKey: settings.groqApiKey
+        provider: settings.aiProvider || defaultProvider,
+        geminiKey: settings.geminiApiKey || (hasGeminiEnv ? process.env.API_KEY : undefined),
+        groqKey: settings.groqApiKey || (hasGroqEnv ? process.env.GROQ_API_KEY : undefined)
       });
+
+      const syncTime = new Date().toISOString();
+      localStorage.setItem('cloudguard_cache', JSON.stringify({
+        report,
+        lastSynced: syncTime
+      }));
+      setLastSynced(syncTime);
+
       setState({
         updates: report.keyUpdates,
         report,
@@ -117,30 +135,56 @@ const App: React.FC = () => {
     window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
   };
 
-  // Automated Schedule Checker
+  // Cache Loader & Automated Schedule Checker
   useEffect(() => {
+    const cached = localStorage.getItem('cloudguard_cache');
+    if (cached) {
+      try {
+        const { report, lastSynced: cachedTime } = JSON.parse(cached);
+        if (report && report.keyUpdates) {
+          setState(prev => ({
+            ...prev,
+            updates: report.keyUpdates,
+            report
+          }));
+          setLastSynced(cachedTime);
+        }
+      } catch (e) {
+        console.error("Failed to load cache", e);
+      }
+    }
+
     checkApiKey();
     const checkSchedule = () => {
       const storedAlerts = localStorage.getItem('cloudguard_alerts');
-      if (!storedAlerts) return;
+      if (!storedAlerts) {
+        loadData(); // No settings yet, but try default/env key
+        return;
+      }
 
-      const settings = JSON.parse(storedAlerts);
-      if (!settings.dailyEmail) return;
+      let settings: any = {};
+      try { settings = JSON.parse(storedAlerts); } catch(e) {}
 
       const lastRun = localStorage.getItem('cloudguard_last_digest');
       const today = new Date().toDateString();
       const currentHour = new Date().getHours();
 
       // If it's a new day and past 8 AM (8-23)
-      if (lastRun !== today && currentHour >= 8) {
+      if (settings.dailyEmail && lastRun !== today && currentHour >= 8) {
         loadData(true);
       } else {
-        loadData(); // Normal initial load
+        // If we don't have updates yet (even from cache), or if cache is old (> 1 hour), sync
+        const hasUpdates = !!(cached && JSON.parse(cached).report);
+        const cacheAge = cached ? (Date.now() - new Date(JSON.parse(cached).lastSynced).getTime()) : Infinity;
+
+        if (!hasUpdates || cacheAge > 3600000) {
+          loadData();
+        }
       }
     };
 
     checkSchedule();
-  }, [loadData]);
+  }, [loadData, checkApiKey]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -234,6 +278,7 @@ const App: React.FC = () => {
           updates={state.updates} 
           report={state.report} 
           loading={state.loading}
+          lastSynced={lastSynced}
           onOpenAlerts={() => setIsAlertsOpen(true)}
         />
       </main>
@@ -241,7 +286,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-sm text-slate-500">
-            &copy; 2024 CloudGuard Intelligence Agent. Fully client-side automation.
+            &copy; 2024 CloudGuard Intelligence Agent. Designed & Developed by Rouzbeh.
           </p>
         </div>
       </footer>

@@ -24,23 +24,27 @@ const App: React.FC = () => {
 
   const checkApiKey = useCallback(() => {
     const stored = localStorage.getItem('cloudguard_alerts');
+    const hasGeminiEnv = !!process.env.API_KEY;
+    const hasGroqEnv = !!process.env.GROQ_API_KEY;
+
     if (!stored) {
-      setApiKeyMissing(!process.env.API_KEY);
-      return !!process.env.API_KEY;
+      setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
+      return hasGeminiEnv || hasGroqEnv;
     }
 
     try {
       const settings = JSON.parse(stored);
-      const provider = settings.aiProvider || 'gemini';
+      const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
+      const provider = settings.aiProvider || defaultProvider;
       const key = provider === 'gemini'
         ? (settings.geminiApiKey || process.env.API_KEY)
-        : settings.groqApiKey;
+        : (settings.groqApiKey || process.env.GROQ_API_KEY);
 
       setApiKeyMissing(!key);
       return !!key;
     } catch (e) {
-      setApiKeyMissing(!process.env.API_KEY);
-      return !!process.env.API_KEY;
+      setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
+      return hasGeminiEnv || hasGroqEnv;
     }
   }, []);
 
@@ -57,12 +61,16 @@ const App: React.FC = () => {
       return;
     }
 
+    const hasGeminiEnv = !!process.env.API_KEY;
+    const hasGroqEnv = !!process.env.GROQ_API_KEY;
+    const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
       const report = await fetchCloudUpdates({
-        provider: settings.aiProvider || 'gemini',
+        provider: settings.aiProvider || defaultProvider,
         geminiKey: settings.geminiApiKey || process.env.API_KEY,
-        groqKey: settings.groqApiKey
+        groqKey: settings.groqApiKey || process.env.GROQ_API_KEY
       });
 
       const syncTime = new Date().toISOString();

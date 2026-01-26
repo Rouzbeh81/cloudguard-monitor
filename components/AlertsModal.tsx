@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect } from 'react';
-import { X, Bell, Mail, Shield, CheckCircle, User } from 'lucide-react';
+import { X, Bell, Mail, Shield, CheckCircle, User, Key, ExternalLink } from 'lucide-react';
 
 interface AlertsModalProps {
   onClose: () => void;
@@ -11,6 +11,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
   const [saved, setSaved] = useState(false);
   const [settings, setSettings] = useState({
     recipientEmail: '',
+    geminiApiKey: '',
     dailyEmail: true,
     securityAlerts: true,
     browserPush: false,
@@ -72,6 +73,33 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
         </div>
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">
+          <div className="mb-6">
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Intelligence API Key</label>
+            <div className="relative mb-2">
+              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                <Key className="h-4 w-4 text-slate-400" />
+              </div>
+              <input
+                type="password"
+                placeholder="Enter Gemini API Key"
+                value={settings.geminiApiKey}
+                onChange={(e) => setSettings(s => ({ ...s, geminiApiKey: e.target.value }))}
+                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
+              />
+            </div>
+            <div className="flex items-center justify-between">
+              <p className="text-[10px] text-slate-400 italic">Stored locally in your browser.</p>
+              <a
+                href="https://aistudio.google.com/app/apikey"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"
+              >
+                Get free API key <ExternalLink className="w-2 h-2" />
+              </a>
+            </div>
+          </div>
+
           <div className="mb-6">
             <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Destination Settings</label>
             <div className="relative">

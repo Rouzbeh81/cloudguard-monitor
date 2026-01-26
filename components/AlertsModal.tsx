@@ -11,7 +11,9 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
   const [saved, setSaved] = useState(false);
   const [settings, setSettings] = useState({
     recipientEmail: '',
+    aiProvider: 'gemini' as 'gemini' | 'groq',
     geminiApiKey: '',
+    groqApiKey: '',
     dailyEmail: true,
     securityAlerts: true,
     browserPush: false,
@@ -74,30 +76,75 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
 
         <div className="p-6 overflow-y-auto max-h-[70vh]">
           <div className="mb-6">
-            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Intelligence API Key</label>
-            <div className="relative mb-2">
-              <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                <Key className="h-4 w-4 text-slate-400" />
-              </div>
-              <input
-                type="password"
-                placeholder="Enter Gemini API Key"
-                value={settings.geminiApiKey}
-                onChange={(e) => setSettings(s => ({ ...s, geminiApiKey: e.target.value }))}
-                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
-              />
-            </div>
-            <div className="flex items-center justify-between">
-              <p className="text-[10px] text-slate-400 italic">Stored locally in your browser.</p>
-              <a
-                href="https://aistudio.google.com/app/apikey"
-                target="_blank"
-                rel="noopener noreferrer"
-                className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"
+            <label className="text-xs font-bold text-slate-500 uppercase tracking-wider mb-2 block">Intelligence Provider</label>
+            <div className="grid grid-cols-2 gap-2 mb-4">
+              <button
+                onClick={() => setSettings(s => ({ ...s, aiProvider: 'gemini' }))}
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${settings.aiProvider === 'gemini' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
               >
-                Get free API key <ExternalLink className="w-2 h-2" />
-              </a>
+                Google Gemini
+              </button>
+              <button
+                onClick={() => setSettings(s => ({ ...s, aiProvider: 'groq' }))}
+                className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${settings.aiProvider === 'groq' ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
+              >
+                Groq (Llama)
+              </button>
             </div>
+
+            {settings.aiProvider === 'gemini' ? (
+              <>
+                <div className="relative mb-2">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Key className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Enter Gemini API Key"
+                    value={settings.geminiApiKey}
+                    onChange={(e) => setSettings(s => ({ ...s, geminiApiKey: e.target.value }))}
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-slate-400 italic">Recommended for Search Grounding.</p>
+                  <a
+                    href="https://aistudio.google.com/app/apikey"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"
+                  >
+                    Get Gemini key <ExternalLink className="w-2 h-2" />
+                  </a>
+                </div>
+              </>
+            ) : (
+              <>
+                <div className="relative mb-2">
+                  <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                    <Key className="h-4 w-4 text-slate-400" />
+                  </div>
+                  <input
+                    type="password"
+                    placeholder="Enter Groq API Key"
+                    value={settings.groqApiKey}
+                    onChange={(e) => setSettings(s => ({ ...s, groqApiKey: e.target.value }))}
+                    className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
+                  />
+                </div>
+                <div className="flex items-center justify-between">
+                  <p className="text-[10px] text-slate-400 italic">Best for Privacy & Speed.</p>
+                  <a
+                    href="https://console.groq.com/keys"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-[10px] text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1"
+                  >
+                    Get Groq key <ExternalLink className="w-2 h-2" />
+                  </a>
+                </div>
+              </>
+            )}
           </div>
 
           <div className="mb-6">

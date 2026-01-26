@@ -4,7 +4,7 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import SummaryModal from './components/SummaryModal';
 import AlertsModal from './components/AlertsModal';
-import { fetchCloudUpdates } from './services/geminiService';
+import { fetchCloudUpdates } from './services/intelligenceService';
 import { SummaryReport, AppState } from './types';
 import { RefreshCw, Mail, AlertCircle, LayoutDashboard, Sparkles, Send } from 'lucide-react';
 
@@ -22,31 +22,47 @@ const App: React.FC = () => {
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
   const checkApiKey = useCallback(() => {
-    let key = "";
     const stored = localStorage.getItem('cloudguard_alerts');
-    if (stored) {
-      try {
-        const settings = JSON.parse(stored);
-        key = settings.geminiApiKey || "";
-      } catch (e) {}
+    if (!stored) {
+      setApiKeyMissing(!process.env.API_KEY);
+      return !!process.env.API_KEY;
     }
 
-    if (!key) {
-      key = process.env.API_KEY || "";
-    }
+    try {
+      const settings = JSON.parse(stored);
+      const provider = settings.aiProvider || 'gemini';
+      const key = provider === 'gemini'
+        ? (settings.geminiApiKey || process.env.API_KEY)
+        : settings.groqApiKey;
 
-    setApiKeyMissing(!key);
-    return !!key;
+      setApiKeyMissing(!key);
+      return !!key;
+    } catch (e) {
+      setApiKeyMissing(!process.env.API_KEY);
+      return !!process.env.API_KEY;
+    }
   }, []);
 
   const loadData = useCallback(async (isAutomated = false) => {
+    const stored = localStorage.getItem('cloudguard_alerts');
+    let settings: any = {};
+    if (stored) {
+      try { settings = JSON.parse(stored); } catch (e) {}
+    }
+
     if (!checkApiKey()) {
-      setState(prev => ({ ...prev, error: "Gemini API Key is missing. Please configure it in settings." }));
+      const msg = settings.aiProvider === 'groq' ? "Groq API Key is missing." : "Gemini API Key is missing.";
+      setState(prev => ({ ...prev, error: `${msg} Please configure it in settings.` }));
       return;
     }
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const report = await fetchCloudUpdates();
+      const report = await fetchCloudUpdates({
+        provider: settings.aiProvider || 'gemini',
+        geminiKey: settings.geminiApiKey || process.env.API_KEY,
+        groqKey: settings.groqApiKey
+      });
       setState({
         updates: report.keyUpdates,
         report,
@@ -201,18 +217,16 @@ const App: React.FC = () => {
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-semibold">Action Required</p>
+                <p className="font-semibold">Intelligence Sync Issue</p>
                 <p className="text-sm opacity-90">{state.error}</p>
               </div>
             </div>
-            {apiKeyMissing && (
-              <button
-                onClick={() => setIsAlertsOpen(true)}
-                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-colors"
-              >
-                Configure Key
-              </button>
-            )}
+            <button
+              onClick={() => setIsAlertsOpen(true)}
+              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+            >
+              {apiKeyMissing ? 'Configure Key' : 'Adjust Settings'}
+            </button>
           </div>
         )}
 

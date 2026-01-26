@@ -16,6 +16,7 @@ const App: React.FC = () => {
     report: null
   });
 
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [automationTriggered, setAutomationTriggered] = useState(false);
@@ -63,6 +64,14 @@ const App: React.FC = () => {
         geminiKey: settings.geminiApiKey || process.env.API_KEY,
         groqKey: settings.groqApiKey
       });
+
+      const syncTime = new Date().toISOString();
+      localStorage.setItem('cloudguard_cache', JSON.stringify({
+        report,
+        lastSynced: syncTime
+      }));
+      setLastSynced(syncTime);
+
       setState({
         updates: report.keyUpdates,
         report,
@@ -117,30 +126,56 @@ const App: React.FC = () => {
     window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
   };
 
-  // Automated Schedule Checker
+  // Cache Loader & Automated Schedule Checker
   useEffect(() => {
+    const cached = localStorage.getItem('cloudguard_cache');
+    if (cached) {
+      try {
+        const { report, lastSynced: cachedTime } = JSON.parse(cached);
+        if (report && report.keyUpdates) {
+          setState(prev => ({
+            ...prev,
+            updates: report.keyUpdates,
+            report
+          }));
+          setLastSynced(cachedTime);
+        }
+      } catch (e) {
+        console.error("Failed to load cache", e);
+      }
+    }
+
     checkApiKey();
     const checkSchedule = () => {
       const storedAlerts = localStorage.getItem('cloudguard_alerts');
-      if (!storedAlerts) return;
+      if (!storedAlerts) {
+        loadData(); // No settings yet, but try default/env key
+        return;
+      }
 
-      const settings = JSON.parse(storedAlerts);
-      if (!settings.dailyEmail) return;
+      let settings: any = {};
+      try { settings = JSON.parse(storedAlerts); } catch(e) {}
 
       const lastRun = localStorage.getItem('cloudguard_last_digest');
       const today = new Date().toDateString();
       const currentHour = new Date().getHours();
 
       // If it's a new day and past 8 AM (8-23)
-      if (lastRun !== today && currentHour >= 8) {
+      if (settings.dailyEmail && lastRun !== today && currentHour >= 8) {
         loadData(true);
       } else {
-        loadData(); // Normal initial load
+        // If we don't have updates yet (even from cache), or if cache is old (> 1 hour), sync
+        const hasUpdates = !!(cached && JSON.parse(cached).report);
+        const cacheAge = cached ? (Date.now() - new Date(JSON.parse(cached).lastSynced).getTime()) : Infinity;
+
+        if (!hasUpdates || cacheAge > 3600000) {
+          loadData();
+        }
       }
     };
 
     checkSchedule();
-  }, [loadData]);
+  }, [loadData, checkApiKey]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -234,6 +269,7 @@ const App: React.FC = () => {
           updates={state.updates} 
           report={state.report} 
           loading={state.loading}
+          lastSynced={lastSynced}
           onOpenAlerts={() => setIsAlertsOpen(true)}
         />
       </main>

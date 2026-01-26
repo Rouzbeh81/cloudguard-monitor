@@ -217,18 +217,16 @@ const App: React.FC = () => {
             <div className="flex items-start gap-3">
               <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
               <div>
-                <p className="font-semibold">Action Required</p>
+                <p className="font-semibold">Intelligence Sync Issue</p>
                 <p className="text-sm opacity-90">{state.error}</p>
               </div>
             </div>
-            {apiKeyMissing && (
-              <button
-                onClick={() => setIsAlertsOpen(true)}
-                className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-colors"
-              >
-                Configure Key
-              </button>
-            )}
+            <button
+              onClick={() => setIsAlertsOpen(true)}
+              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+            >
+              {apiKeyMissing ? 'Configure Key' : 'Adjust Settings'}
+            </button>
           </div>
         )}
 

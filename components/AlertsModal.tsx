@@ -107,12 +107,12 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-slate-400 italic">Recommended for Search Grounding.</p>
+                  <p className="text-[10px] text-slate-400 italic font-medium text-blue-600">Recommended: Best for live web search grounding.</p>
                   <a
                     href="https://aistudio.google.com/app/apikey"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1"
+                    className="text-[10px] text-blue-600 hover:text-blue-700 font-bold flex items-center gap-1 shrink-0 ml-4"
                   >
                     Get Gemini key <ExternalLink className="w-2 h-2" />
                   </a>
@@ -133,12 +133,12 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                   />
                 </div>
                 <div className="flex items-center justify-between">
-                  <p className="text-[10px] text-slate-400 italic">Best for Privacy & Speed.</p>
+                  <p className="text-[10px] text-slate-400 italic font-medium text-orange-600">Free Alternative: Great fallback if Gemini quota is exhausted.</p>
                   <a
                     href="https://console.groq.com/keys"
                     target="_blank"
                     rel="noopener noreferrer"
-                    className="text-[10px] text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1"
+                    className="text-[10px] text-orange-600 hover:text-orange-700 font-bold flex items-center gap-1 shrink-0 ml-4"
                   >
                     Get Groq key <ExternalLink className="w-2 h-2" />
                   </a>

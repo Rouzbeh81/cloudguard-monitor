@@ -286,7 +286,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-sm text-slate-500">
-            &copy; 2026 CloudGuard Intelligence Agent. Designed & Developed by Rouzbeh.
+            &copy; 2024 CloudGuard Intelligence Agent. Designed & Developed by Rouzbeh.
           </p>
         </div>
       </footer>

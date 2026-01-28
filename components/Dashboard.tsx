@@ -1,18 +1,22 @@
 
-import React from 'react';
+import React, { useState, useMemo } from 'react';
 import { CloudUpdate, SummaryReport } from '../types';
 import UpdateCard from './UpdateCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Layers, Activity, ShieldAlert, CheckCircle2 } from 'lucide-react';
+import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock } from 'lucide-react';
 
 interface DashboardProps {
   updates: CloudUpdate[];
   report: SummaryReport | null;
   loading: boolean;
+  lastSynced: string | null;
   onOpenAlerts: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, onOpenAlerts }) => {
+const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSynced, onOpenAlerts }) => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const [activeCategory, setActiveCategory] = useState<string>('All');
+
   const getCategoryCount = (cat: string) => 
     updates.filter(u => u.category.toLowerCase() === cat.toLowerCase()).length;
 
@@ -24,7 +28,21 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, onOpenA
 
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
-  if (loading) {
+  const filteredUpdates = useMemo(() => {
+    return updates.filter(update => {
+      const matchesSearch =
+        update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        update.description.toLowerCase().includes(searchQuery.toLowerCase());
+
+      const matchesCategory =
+        activeCategory === 'All' ||
+        update.category.toLowerCase() === activeCategory.toLowerCase();
+
+      return matchesSearch && matchesCategory;
+    });
+  }, [updates, searchQuery, activeCategory]);
+
+  if (loading && updates.length === 0) {
     return (
       <div className="space-y-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 animate-pulse">
@@ -73,13 +91,47 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, onOpenA
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Feed */}
         <div className="lg:col-span-2 space-y-4">
-          <div className="flex items-center justify-between mb-2">
-            <h2 className="text-lg font-semibold text-slate-900">Recent Announcements</h2>
-            <span className="text-xs font-medium text-slate-500 uppercase tracking-wider">Cloud Roadmap</span>
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
+            <div>
+              <h2 className="text-lg font-semibold text-slate-900">Recent Announcements</h2>
+              {lastSynced && (
+                <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
+                  <Clock className="w-3 h-3" />
+                  Last synced: {new Date(lastSynced).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                </div>
+              )}
+            </div>
+            <div className="relative group">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
+              <input
+                type="text"
+                placeholder="Search updates..."
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
+                className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
+              />
+            </div>
           </div>
+
+          <div className="flex flex-wrap gap-2 mb-4">
+            {['All', 'Azure', 'M365', 'Security'].map((cat) => (
+              <button
+                key={cat}
+                onClick={() => setActiveCategory(cat)}
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                  activeCategory === cat
+                    ? 'bg-slate-900 text-white shadow-md'
+                    : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
+                }`}
+              >
+                {cat}
+              </button>
+            ))}
+          </div>
+
           <div className="space-y-4">
-            {updates.length > 0 ? (
-              updates.map((update) => (
+            {filteredUpdates.length > 0 ? (
+              filteredUpdates.map((update) => (
                 <UpdateCard key={update.id} update={update} />
               ))
             ) : (

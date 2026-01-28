@@ -36,6 +36,12 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
   const m365Data = await fetchM365Direct();
 
   // 2. Build the context for the LLM
+  const m365Context = m365Data.map(item =>
+    `[M365] ${item.title} (Status: ${item.status}) - ${item.description.substring(0, 300)}...`
+  ).join('\n\n');
+
+  const systemInstruction = `
+    You are a professional Cloud Architect Intelligence Agent.
   const m365Context = m365Data.map(item => {
     const dateStr = item.modified ? item.modified.split('T')[0] : 'Recent';
     return `[M365] ${item.title} (Date: ${dateStr}, Status: ${item.status}) - ${item.description.substring(0, 300)}...`;
@@ -53,6 +59,9 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
     ${m365Context || "No direct M365 data available. Use search or internal knowledge."}
 
     Instructions:
+    1. If you are Gemini, use Google Search to find official Azure updates from the last 7 days.
+    2. If you are Groq, use the provided M365 context and your internal knowledge for Azure.
+    3. Generate a "Cloud Intelligence Digest".
     1. IMPORTANT: Use the current year ${currentYear} for all updates. Do not return updates from 2024.
     2. If you are Gemini, use Google Search to find official Azure updates from the last 7 days (specifically search for ${currentYear} updates).
     3. If you are Groq, use the provided M365 context (pay attention to the dates provided) and your knowledge for Azure updates in ${currentYear}.

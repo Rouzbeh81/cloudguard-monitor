@@ -42,6 +42,18 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
 
   const systemInstruction = `
     You are a professional Cloud Architect Intelligence Agent.
+  const m365Context = m365Data.map(item => {
+    const dateStr = item.modified ? item.modified.split('T')[0] : 'Recent';
+    return `[M365] ${item.title} (Date: ${dateStr}, Status: ${item.status}) - ${item.description.substring(0, 300)}...`;
+  }).join('\n\n');
+
+  const now = new Date();
+  const currentDate = now.toISOString().split('T')[0];
+  const currentYear = now.getFullYear();
+
+  const systemInstruction = `
+    You are a professional Cloud Architect Intelligence Agent.
+    CURRENT DATE: ${currentDate}
 
     CRITICAL CONTEXT (M365 Official API):
     ${m365Context || "No direct M365 data available. Use search or internal knowledge."}
@@ -50,6 +62,10 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
     1. If you are Gemini, use Google Search to find official Azure updates from the last 7 days.
     2. If you are Groq, use the provided M365 context and your internal knowledge for Azure.
     3. Generate a "Cloud Intelligence Digest".
+    1. IMPORTANT: Use the current year ${currentYear} for all updates. Do not return updates from 2024.
+    2. If you are Gemini, use Google Search to find official Azure updates from the last 7 days (specifically search for ${currentYear} updates).
+    3. If you are Groq, use the provided M365 context (pay attention to the dates provided) and your knowledge for Azure updates in ${currentYear}.
+    4. Generate a "Cloud Intelligence Digest".
     4. "executiveSummary": 2-3 sentences summarizing the biggest trends.
     5. "keyUpdates": 6-10 specific updates.
        - "category": MUST be "Azure", "M365", or "Security".

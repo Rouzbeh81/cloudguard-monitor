@@ -4,7 +4,7 @@ import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import SummaryModal from './components/SummaryModal';
 import AlertsModal from './components/AlertsModal';
-import { fetchCloudUpdates } from './services/geminiService';
+import { fetchCloudUpdates } from './services/intelligenceService';
 import { SummaryReport, AppState } from './types';
 import { RefreshCw, Mail, AlertCircle, LayoutDashboard, Sparkles, Send } from 'lucide-react';
 
@@ -16,14 +16,71 @@ const App: React.FC = () => {
     report: null
   });
 
+  const [lastSynced, setLastSynced] = useState<string | null>(null);
   const [isSummaryOpen, setIsSummaryOpen] = useState(false);
   const [isAlertsOpen, setIsAlertsOpen] = useState(false);
   const [automationTriggered, setAutomationTriggered] = useState(false);
+  const [apiKeyMissing, setApiKeyMissing] = useState(false);
+
+  const checkApiKey = useCallback(() => {
+    const stored = localStorage.getItem('cloudguard_alerts');
+    const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
+    const hasGroqEnv = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined";
+
+    if (!stored) {
+      setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
+      return hasGeminiEnv || hasGroqEnv;
+    }
+
+    try {
+      const settings = JSON.parse(stored);
+      const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
+      const provider = settings.aiProvider || defaultProvider;
+      const key = provider === 'gemini'
+        ? (settings.geminiApiKey || (hasGeminiEnv ? process.env.API_KEY : undefined))
+        : (settings.groqApiKey || (hasGroqEnv ? process.env.GROQ_API_KEY : undefined));
+
+      setApiKeyMissing(!key);
+      return !!key;
+    } catch (e) {
+      setApiKeyMissing(!(hasGeminiEnv || hasGroqEnv));
+      return hasGeminiEnv || hasGroqEnv;
+    }
+  }, []);
 
   const loadData = useCallback(async (isAutomated = false) => {
+    const stored = localStorage.getItem('cloudguard_alerts');
+    let settings: any = {};
+    if (stored) {
+      try { settings = JSON.parse(stored); } catch (e) {}
+    }
+
+    if (!checkApiKey()) {
+      const msg = settings.aiProvider === 'groq' ? "Groq API Key is missing." : "Gemini API Key is missing.";
+      setState(prev => ({ ...prev, error: `${msg} Please configure it in settings.` }));
+      return;
+    }
+
+    const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
+    const hasGroqEnv = !!process.env.GROQ_API_KEY && process.env.GROQ_API_KEY !== "undefined";
+    const defaultProvider = hasGroqEnv && !hasGeminiEnv ? 'groq' : 'gemini';
+
     setState(prev => ({ ...prev, loading: true, error: null }));
     try {
-      const report = await fetchCloudUpdates();
+      // Always pass both keys (from settings OR env) to enable transparent fallback in the service layer
+      const report = await fetchCloudUpdates({
+        provider: settings.aiProvider || defaultProvider,
+        geminiKey: settings.geminiApiKey || (hasGeminiEnv ? process.env.API_KEY : undefined),
+        groqKey: settings.groqApiKey || (hasGroqEnv ? process.env.GROQ_API_KEY : undefined)
+      });
+
+      const syncTime = new Date().toISOString();
+      localStorage.setItem('cloudguard_cache', JSON.stringify({
+        report,
+        lastSynced: syncTime
+      }));
+      setLastSynced(syncTime);
+
       setState({
         updates: report.keyUpdates,
         report,
@@ -78,29 +135,56 @@ const App: React.FC = () => {
     window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
   };
 
-  // Automated Schedule Checker
+  // Cache Loader & Automated Schedule Checker
   useEffect(() => {
+    const cached = localStorage.getItem('cloudguard_cache');
+    if (cached) {
+      try {
+        const { report, lastSynced: cachedTime } = JSON.parse(cached);
+        if (report && report.keyUpdates) {
+          setState(prev => ({
+            ...prev,
+            updates: report.keyUpdates,
+            report
+          }));
+          setLastSynced(cachedTime);
+        }
+      } catch (e) {
+        console.error("Failed to load cache", e);
+      }
+    }
+
+    checkApiKey();
     const checkSchedule = () => {
       const storedAlerts = localStorage.getItem('cloudguard_alerts');
-      if (!storedAlerts) return;
+      if (!storedAlerts) {
+        loadData(); // No settings yet, but try default/env key
+        return;
+      }
 
-      const settings = JSON.parse(storedAlerts);
-      if (!settings.dailyEmail) return;
+      let settings: any = {};
+      try { settings = JSON.parse(storedAlerts); } catch(e) {}
 
       const lastRun = localStorage.getItem('cloudguard_last_digest');
       const today = new Date().toDateString();
       const currentHour = new Date().getHours();
 
       // If it's a new day and past 8 AM (8-23)
-      if (lastRun !== today && currentHour >= 8) {
+      if (settings.dailyEmail && lastRun !== today && currentHour >= 8) {
         loadData(true);
       } else {
-        loadData(); // Normal initial load
+        // If we don't have updates yet (even from cache), or if cache is old (> 1 hour), sync
+        const hasUpdates = !!(cached && JSON.parse(cached).report);
+        const cacheAge = cached ? (Date.now() - new Date(JSON.parse(cached).lastSynced).getTime()) : Infinity;
+
+        if (!hasUpdates || cacheAge > 3600000) {
+          loadData();
+        }
       }
     };
 
     checkSchedule();
-  }, [loadData]);
+  }, [loadData, checkApiKey]);
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col">
@@ -173,12 +257,20 @@ const App: React.FC = () => {
         </div>
 
         {state.error && (
-          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start gap-3 text-red-700">
-            <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
-            <div>
-              <p className="font-semibold">Sync Failed</p>
-              <p className="text-sm opacity-90">{state.error}</p>
+          <div className="mb-8 p-4 bg-red-50 border border-red-200 rounded-xl flex items-start justify-between gap-3 text-red-700 animate-in fade-in slide-in-from-top-2">
+            <div className="flex items-start gap-3">
+              <AlertCircle className="w-5 h-5 mt-0.5 flex-shrink-0" />
+              <div>
+                <p className="font-semibold">Intelligence Sync Issue</p>
+                <p className="text-sm opacity-90">{state.error}</p>
+              </div>
             </div>
+            <button
+              onClick={() => setIsAlertsOpen(true)}
+              className="px-4 py-2 bg-red-100 hover:bg-red-200 text-red-700 text-xs font-bold rounded-lg transition-colors whitespace-nowrap"
+            >
+              {apiKeyMissing ? 'Configure Key' : 'Adjust Settings'}
+            </button>
           </div>
         )}
 
@@ -186,6 +278,7 @@ const App: React.FC = () => {
           updates={state.updates} 
           report={state.report} 
           loading={state.loading}
+          lastSynced={lastSynced}
           onOpenAlerts={() => setIsAlertsOpen(true)}
         />
       </main>
@@ -193,7 +286,7 @@ const App: React.FC = () => {
       <footer className="bg-white border-t border-slate-200 py-6 mt-auto">
         <div className="max-w-7xl mx-auto px-4 text-center">
           <p className="text-sm text-slate-500">
-            &copy; 2024 CloudGuard Intelligence Agent. Fully client-side automation.
+            &copy; 2024 CloudGuard Intelligence Agent. Designed & Developed by Rouzbeh.
           </p>
         </div>
       </footer>
@@ -207,7 +300,10 @@ const App: React.FC = () => {
 
       {isAlertsOpen && (
         <AlertsModal 
-          onClose={() => setIsAlertsOpen(false)} 
+          onClose={() => {
+            setIsAlertsOpen(false);
+            checkApiKey();
+          }}
         />
       )}
     </div>

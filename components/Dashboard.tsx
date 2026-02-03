@@ -106,6 +106,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
               <input
                 type="text"
                 placeholder="Search updates..."
+                aria-label="Search updates"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
                 className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
@@ -118,6 +119,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
               <button
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
+                aria-pressed={activeCategory === cat}
                 className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
                   activeCategory === cat
                     ? 'bg-slate-900 text-white shadow-md'

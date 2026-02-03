@@ -50,14 +50,17 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
           <Icon className="w-4 h-4" />
         </div>
         <div>
-          <label htmlFor={id} className="text-sm font-bold text-slate-900 block">{label}</label>
+          <label id={`${id}-label`} className="text-sm font-bold text-slate-900 block">{label}</label>
           <span className="text-xs text-slate-500">{description}</span>
         </div>
       </div>
       <button
         id={id}
+        role="switch"
+        aria-checked={Boolean(settings[id as keyof typeof settings])}
+        aria-labelledby={`${id}-label`}
         onClick={() => setSettings(s => ({ ...s, [id]: !s[id as keyof typeof settings] }))}
-        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none ${settings[id as keyof typeof settings] ? 'bg-blue-600' : 'bg-slate-200'}`}
+        className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 ${settings[id as keyof typeof settings] ? 'bg-blue-600' : 'bg-slate-200'}`}
       >
         <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${settings[id as keyof typeof settings] ? 'translate-x-5' : 'translate-x-0'}`} />
       </button>
@@ -65,11 +68,11 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
   );
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm" role="dialog" aria-modal="true" aria-labelledby="modal-title">
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
-          <h3 className="font-bold text-slate-900">Configure Notification Alerts</h3>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full">
+          <h3 id="modal-title" className="font-bold text-slate-900">Configure Notification Alerts</h3>
+          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full" aria-label="Close modal">
             <X className="w-5 h-5" />
           </button>
         </div>
@@ -80,12 +83,14 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
             <div className="grid grid-cols-2 gap-2 mb-4">
               <button
                 onClick={() => setSettings(s => ({ ...s, aiProvider: 'gemini' }))}
+                aria-pressed={settings.aiProvider === 'gemini'}
                 className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${settings.aiProvider === 'gemini' ? 'bg-blue-50 border-blue-200 text-blue-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
               >
                 Google Gemini
               </button>
               <button
                 onClick={() => setSettings(s => ({ ...s, aiProvider: 'groq' }))}
+                aria-pressed={settings.aiProvider === 'groq'}
                 className={`py-2 px-3 rounded-xl text-xs font-bold border transition-all ${settings.aiProvider === 'groq' ? 'bg-orange-50 border-orange-200 text-orange-700' : 'bg-white border-slate-200 text-slate-600 hover:bg-slate-50'}`}
               >
                 Groq (Llama)
@@ -101,6 +106,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                   <input
                     type="password"
                     placeholder="Enter Gemini API Key"
+                    aria-label="Gemini API Key"
                     value={settings.geminiApiKey}
                     onChange={(e) => setSettings(s => ({ ...s, geminiApiKey: e.target.value }))}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
@@ -127,6 +133,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                   <input
                     type="password"
                     placeholder="Enter Groq API Key"
+                    aria-label="Groq API Key"
                     value={settings.groqApiKey}
                     onChange={(e) => setSettings(s => ({ ...s, groqApiKey: e.target.value }))}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
@@ -156,6 +163,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
               <input
                 type="email"
                 placeholder="Enter your email address"
+                aria-label="Recipient email address"
                 value={settings.recipientEmail}
                 onChange={(e) => setSettings(s => ({ ...s, recipientEmail: e.target.value }))}
                 className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"

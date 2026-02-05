@@ -1,34 +1,43 @@
-
 import React, { useState, useEffect } from 'react';
-import { X, Bell, Mail, Shield, CheckCircle, User, Key, ExternalLink } from 'lucide-react';
+import { X, Bell, Mail, Shield, Save, CheckCircle, ExternalLink, Key, User } from 'lucide-react';
+import { AIProvider } from '../services/intelligenceService';
 
 interface AlertsModalProps {
   onClose: () => void;
 }
 
+interface AlertSettings {
+  dailyEmail: boolean;
+  securityAlerts: boolean;
+  browserPush: boolean;
+  aiProvider: AIProvider;
+  geminiApiKey: string;
+  groqApiKey: string;
+  recipientEmail: string;
+}
+
 const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
-  const [saving, setSaving] = useState(false);
-  const [saved, setSaved] = useState(false);
-  const [settings, setSettings] = useState({
-    recipientEmail: '',
-    aiProvider: 'gemini' as 'gemini' | 'groq',
-    geminiApiKey: '',
-    groqApiKey: '',
+  // Enhanced with accessibility (ARIA roles/labels) from main and sophisticated AI logic from feature branch.
+  const [settings, setSettings] = useState<AlertSettings>({
     dailyEmail: true,
     securityAlerts: true,
     browserPush: false,
-    m365Updates: true,
-    azureUpdates: true
+    aiProvider: 'gemini',
+    geminiApiKey: '',
+    groqApiKey: '',
+    recipientEmail: ''
   });
 
+  const [saving, setSaving] = useState(false);
+  const [saved, setSaved] = useState(false);
+
   useEffect(() => {
-    const stored = localStorage.getItem('cloudguard_alerts');
-    if (stored) {
+    const savedSettings = localStorage.getItem('cloudguard_alerts');
+    if (savedSettings) {
       try {
-        const parsed = JSON.parse(stored);
-        setSettings(prev => ({ ...prev, ...parsed }));
+        setSettings(JSON.parse(savedSettings));
       } catch (e) {
-        console.error("Failed to parse settings", e);
+        console.error("Failed to load settings", e);
       }
     }
   }, []);
@@ -36,21 +45,26 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
   const handleSave = () => {
     setSaving(true);
     localStorage.setItem('cloudguard_alerts', JSON.stringify(settings));
+
+    // Simulate API call for backend sync
     setTimeout(() => {
       setSaving(false);
       setSaved(true);
-      setTimeout(() => setSaved(false), 2000);
+      setTimeout(() => {
+        setSaved(false);
+        onClose();
+      }, 1500);
     }, 800);
   };
 
-  const Toggle = ({ id, label, description, icon: Icon }: any) => (
-    <div className="flex items-start justify-between py-4 border-b border-slate-100 last:border-0">
+  const Toggle = ({ id, label, description, icon: Icon }: { id: string, label: string, description: string, icon: any }) => (
+    <div className="flex items-center justify-between py-4 border-b border-slate-100 last:border-0">
       <div className="flex gap-3">
-        <div className="mt-1 p-2 bg-slate-50 rounded-lg text-slate-500">
+        <div className="mt-1 p-2 bg-slate-50 rounded-lg text-slate-400">
           <Icon className="w-4 h-4" />
         </div>
-        <div>
-          <label id={`${id}-label`} className="text-sm font-bold text-slate-900 block">{label}</label>
+        <div className="flex flex-col">
+          <label className="text-sm font-bold text-slate-900" id={`${id}-label`} htmlFor={id}>{label}</label>
           <span className="text-xs text-slate-500">{description}</span>
         </div>
       </div>

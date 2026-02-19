@@ -6,6 +6,7 @@ export interface CloudUpdate {
   date: string;
   description: string;
   url: string;
+  subcategory: string;
   status: 'General Availability' | 'Public Preview' | 'Development' | 'Retired';
 }
 

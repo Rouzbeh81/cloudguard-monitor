@@ -29,6 +29,12 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
 
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
+  const quarterInfo = useMemo(() => {
+    const now = new Date();
+    const q = Math.floor(now.getMonth() / 3) + 1;
+    return `Q${q} ${now.getFullYear()}`;
+  }, []);
+
   const filteredUpdates = useMemo(() => {
     return updates.filter(update => {
       const matchesSearch =
@@ -94,7 +100,12 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
         <div className="lg:col-span-2 space-y-4">
           <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-2">
             <div>
-              <h2 className="text-lg font-semibold text-slate-900">Recent Announcements</h2>
+              <div className="flex items-center gap-2 mb-0.5">
+                <h2 className="text-lg font-semibold text-slate-900">Recent Announcements</h2>
+                <span className="px-2 py-0.5 bg-blue-100 text-blue-700 text-[10px] font-bold rounded-md uppercase tracking-wider">
+                  {quarterInfo}
+                </span>
+              </div>
               {lastSynced && (
                 <div className="flex items-center gap-1.5 text-[11px] text-slate-500 font-medium">
                   <Clock className="w-3 h-3" />

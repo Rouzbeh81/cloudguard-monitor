@@ -46,8 +46,8 @@ const fetchM365Direct = async (): Promise<any[]> => {
     const response = await fetch('https://www.microsoft.com/releasecommunications/api/v1/m365');
     if (!response.ok) return [];
     const data = await response.json();
-    // Take the most recent 20 items for better coverage
-    return Array.isArray(data) ? data.slice(0, 20) : [];
+    // Take more items for better quarterly coverage (max 100)
+    return Array.isArray(data) ? data.slice(0, 100) : [];
   } catch (e) {
     console.error("Failed to fetch M365 direct updates", e);
     return [];
@@ -69,31 +69,36 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
   const now = new Date();
   const currentDate = now.toISOString().split('T')[0];
   const currentYear = now.getFullYear();
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const quarterLabel = `Q${currentQuarter} ${currentYear}`;
 
   const systemInstruction = `
     You are a professional Cloud Architect Intelligence Agent.
     CURRENT DATE: ${currentDate}
+    TARGET QUARTER: ${quarterLabel}
 
     CRITICAL CONTEXT (M365 Official API):
     ${m365Context || "No direct M365 data available. Use search or internal knowledge."}
 
     Instructions:
-    1. IMPORTANT: Focus on updates from late 2025 and ${currentYear}. Do not return generic or outdated updates from 2024 or earlier.
-    2. PRIORITIZE the provided M365 Context for all M365 and Entra ID updates.
-    3. For M365 updates, you MUST use the following URL format: https://www.microsoft.com/en-us/microsoft-365/roadmap?id={ID} where {ID} is the ID provided in the context (e.g., [ID:12345]).
-    4. For Azure, use Google Search (if available) to find official announcements from ${currentYear}.
-    5. CRITICAL: Provide DEEP LINKS for all updates. Do NOT use generic root URLs like "https://azure.microsoft.com/updates/" or "https://www.microsoft.com/microsoft-365/roadmap". Every update must link to its specific announcement page.
-    6. Search specifically for "Microsoft Entra ID WebView2 Windows 11" as this is a high-priority recent update.
-    7. Avoid generic hallucinations like "Azure Security Center Enhancements" (the current name is Microsoft Defender for Cloud).
+    1. QUARTERLY FOCUS: Only include updates where the release, preview, or development date falls within ${quarterLabel}.
+    2. COMPREHENSIVE COVERAGE: Provide exactly 50 high-importance updates across Azure, M365, and Security.
+    3. PRODUCT SCOPE:
+       - M365: Include the ENTIRE suite (Teams, Intune, Viva, Purview, Defender, Office, etc.).
+       - Azure: Perform targeted searches for "Azure Compute", "Azure Networking", "Azure AI", "Azure Storage", and "Azure Databases" for ${quarterLabel}.
+    4. CONTENT QUALITY: Focus on NEWLY ADDED FUNCTIONALITY and features. Avoid minor bug fixes or pricing/SKU changes.
+    5. PRIORITIZE the provided M365 Context for all M365 and Intune updates.
+    6. URL FORMAT: For M365, use: https://www.microsoft.com/en-us/microsoft-365/roadmap?id={ID}. For Azure, find EXACT DEEP LINKS to the specific update on azure.microsoft.com.
+    7. DEEP LINKS ONLY: Do NOT use generic root URLs. Every update must link to its specific announcement.
     8. Generate a "Cloud Intelligence Digest" as a valid JSON object.
     9. Required fields in JSON:
-       - "executiveSummary": 2-3 sentences summarizing the biggest trends.
-       - "keyUpdates": 6-10 specific updates.
+       - "executiveSummary": 2-3 sentences summarizing the biggest trends for ${quarterLabel}.
+       - "keyUpdates": List of 50 updates.
          - "category": MUST be "Azure", "M365", or "Security".
          - "title": Concise and technical.
          - "status": "General Availability", "Public Preview", "Development", or "Retired".
          - "description": 1-2 sentences of technical impact.
-         - "date": YYYY-MM-DD.
+         - "date": YYYY-MM-DD (Estimate if only Month/Quarter is known).
          - "url": MANDATORY DEEP LINK to the specific update.
 
     Return ONLY valid JSON.
@@ -133,13 +138,18 @@ const handleGemini = async (apiKey: string, systemInstruction: string, retryCoun
   if (!apiKey) throw new Error("Gemini API Key is missing. Configure it in Settings.");
 
   const ai = new GoogleGenAI({ apiKey });
+  const now = new Date();
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const quarterLabel = `Q${currentQuarter} ${now.getFullYear()}`;
+
   const userPrompt = `
     M365 CRITICAL CONTEXT (Include IDs for Roadmap URLs):
     ${m365Context || "No direct M365 data available."}
 
-    Task: Find recent Azure and Security updates from the last 7 days using Google Search.
-    For each Azure update, find the EXACT DEEP LINK to the azure.microsoft.com/en-us/updates/ page.
-    Combine these with the M365 context provided above.
+    Task: Find high-importance Azure and Security updates scheduled for release or in preview during ${quarterLabel}.
+    Search for "Azure Compute", "Azure AI", "Azure Networking", "Azure Storage", and "Azure Security" updates specifically for ${quarterLabel}.
+    For each Azure update, find the EXACT DEEP LINK to the azure.microsoft.com announcement page.
+    Combine these with the M365 context provided above to reach a total of 50 items.
   `;
 
   try {
@@ -187,11 +197,16 @@ const handleGemini = async (apiKey: string, systemInstruction: string, retryCoun
 const handleGroq = async (apiKey: string, systemInstruction: string, retryCount: number, options: FetchOptions, m365Context: string): Promise<SummaryReport> => {
   if (!apiKey) throw new Error("Groq API Key is missing. Configure it in Settings.");
 
+  const now = new Date();
+  const currentQuarter = Math.floor(now.getMonth() / 3) + 1;
+  const quarterLabel = `Q${currentQuarter} ${now.getFullYear()}`;
+
   const prompt = `
     M365 CONTEXT (Use IDs for Roadmap URLs):
     ${m365Context}
 
-    Generate the Cloud Intelligence Digest based on this context and your knowledge of Azure updates from late 2025/early 2026.
+    Generate the Cloud Intelligence Digest based on this context and your knowledge of Azure updates for ${quarterLabel}.
+    Include exactly 50 updates in total, focusing on high-impact new features.
     Ensure every M365 update uses the Roadmap URL with the correct ID.
   `;
 

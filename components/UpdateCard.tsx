@@ -51,7 +51,7 @@ const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
       <div className="flex items-center justify-between border-t border-slate-50 pt-3">
         <div className="flex items-center gap-2">
           <Tag className="w-3.5 h-3.5 text-slate-400" />
-          <span className="text-[11px] text-slate-500 font-medium">Cloud Infrastructure</span>
+          <span className="text-[11px] text-slate-500 font-medium">{update.subcategory || 'General Update'}</span>
         </div>
         <a 
           href={update.url} 

@@ -95,6 +95,7 @@ export const fetchCloudUpdates = async (options: FetchOptions, retryCount = 0): 
        - "executiveSummary": 2-3 sentences summarizing the biggest trends for ${quarterLabel}.
        - "keyUpdates": List of 50 updates.
          - "category": MUST be "Azure", "M365", or "Security".
+         - "subcategory": The specific product or service (e.g., "Intune", "Teams", "AKS", "Defender").
          - "title": Concise and technical.
          - "status": "General Availability", "Public Preview", "Development", or "Retired".
          - "description": 1-2 sentences of technical impact.

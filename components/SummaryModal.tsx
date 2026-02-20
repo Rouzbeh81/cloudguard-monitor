@@ -1,7 +1,7 @@
 
-import React from 'react';
+import React, { useState } from 'react';
 import { SummaryReport } from '../types';
-import { X, Sparkles, ExternalLink, Globe } from 'lucide-react';
+import { X, Sparkles, ExternalLink, Globe, CheckCircle } from 'lucide-react';
 
 interface SummaryModalProps {
   report: SummaryReport;
@@ -9,8 +9,16 @@ interface SummaryModalProps {
 }
 
 const SummaryModal: React.FC<SummaryModalProps> = ({ report, onClose }) => {
+  const [copied, setCopied] = useState(false);
+
+  const handleCopy = () => {
+    navigator.clipboard.writeText(report.executiveSummary);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-sm animate-in fade-in duration-200" role="dialog" aria-modal="true" aria-labelledby="summary-title">
       <div className="bg-white rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-hidden flex flex-col shadow-2xl animate-in zoom-in-95 duration-200">
         {/* Header */}
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
@@ -19,7 +27,7 @@ const SummaryModal: React.FC<SummaryModalProps> = ({ report, onClose }) => {
               <Sparkles className="w-5 h-5" />
             </div>
             <div>
-              <h3 className="font-bold text-slate-900">AI Intelligent Digest</h3>
+              <h3 id="summary-title" className="font-bold text-slate-900">AI Intelligent Digest</h3>
               <p className="text-xs text-slate-500">Analysis completed at {new Date(report.timestamp).toLocaleTimeString()}</p>
             </div>
           </div>
@@ -88,13 +96,21 @@ const SummaryModal: React.FC<SummaryModalProps> = ({ report, onClose }) => {
             Dismiss
           </button>
           <button 
-            onClick={() => {
-              navigator.clipboard.writeText(report.executiveSummary);
-              alert("Executive summary copied to clipboard!");
-            }}
-            className="px-6 py-2 bg-blue-600 hover:bg-blue-700 text-white text-sm font-bold rounded-lg transition-colors shadow-lg shadow-blue-200"
+            onClick={handleCopy}
+            className={`px-6 py-2 text-sm font-bold rounded-lg transition-all shadow-lg flex items-center gap-2 ${
+              copied
+                ? 'bg-emerald-600 text-white shadow-emerald-200'
+                : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-200'
+            }`}
           >
-            Copy Summary
+            {copied ? (
+              <>
+                <CheckCircle className="w-4 h-4" />
+                Copied!
+              </>
+            ) : (
+              'Copy Summary'
+            )}
           </button>
         </div>
       </div>

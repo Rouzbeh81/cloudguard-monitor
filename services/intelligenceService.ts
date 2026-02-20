@@ -13,27 +13,31 @@ interface FetchOptions {
 }
 
 /**
- * Ensures that the updates have deep links and valid roadmap URLs.
+ * Ensures that the updates have deep links, valid categories, and safe protocols.
  */
 const ensureDeepLinks = (updates: any[]): any[] => {
+  const VALID_CATEGORIES = ['Azure', 'M365', 'Security'];
+
   return updates.map(u => {
     let url = u.url || "";
 
+    // Security: Validate URL protocol to prevent javascript: XSS
+    const isSafeProtocol = url.toLowerCase().startsWith('http://') || url.toLowerCase().startsWith('https://');
+    if (!isSafeProtocol) {
+      url = "https://azure.microsoft.com/updates/"; // Safe fallback
+    }
+
+    // Security: Validate Category to prevent UI breakage or unexpected states
+    const category = VALID_CATEGORIES.includes(u.category) ? u.category : 'Azure';
+
     // Fix generic M365 Roadmap links if we can detect an ID in the title or description
-    // Most AI-generated M365 updates from our context will have a recognizable title
-    // But if the AI already followed instructions, we just sanitize
-    if (u.category === 'M365' || u.category === 'Security') {
+    if (category === 'M365' || category === 'Security') {
       if (url.includes('microsoft-365/roadmap') && !url.includes('id=')) {
         // AI returned a generic roadmap link, we'll keep it but prioritize deep ones in instructions
       }
     }
 
-    // Sanitize generic Azure root links if possible
-    if (u.category === 'Azure' && url === "https://azure.microsoft.com/updates/") {
-      // Keep it if nothing better, but AI is instructed to avoid this
-    }
-
-    return { ...u, url };
+    return { ...u, url, category };
   });
 };
 
@@ -171,10 +175,14 @@ const handleGemini = async (apiKey: string, systemInstruction: string, retryCoun
     const chunks = response.candidates?.[0]?.groundingMetadata?.groundingChunks || [];
     const sources = chunks
       .filter(chunk => chunk.web)
-      .map(chunk => ({
-        title: chunk.web?.title || "Microsoft Source",
-        uri: chunk.web?.uri || "#"
-      }));
+      .map(chunk => {
+        const uri = chunk.web?.uri || "";
+        const isSafe = uri.toLowerCase().startsWith('http://') || uri.toLowerCase().startsWith('https://');
+        return {
+          title: chunk.web?.title || "Microsoft Source",
+          uri: isSafe ? uri : "https://azure.microsoft.com/updates/"
+        };
+      });
 
     return {
       timestamp: new Date().toISOString(),
@@ -238,6 +246,15 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
     const content = data.choices[0].message.content;
     const parsedResponse = JSON.parse(content);
 
+    // Sanitize sources if AI returned any in the future (currently hardcoded but good practice)
+    const sources = (parsedResponse.sources || []).map((s: any) => {
+      const isSafe = s.uri?.toLowerCase().startsWith('http://') || s.uri?.toLowerCase().startsWith('https://');
+      return {
+        title: s.title || "Microsoft Source",
+        uri: isSafe ? s.uri : "https://azure.microsoft.com/updates/"
+      };
+    });
+
     return {
       timestamp: new Date().toISOString(),
       executiveSummary: parsedResponse.executiveSummary || "Summary of recent cloud service updates.",
@@ -245,7 +262,7 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
         ...u,
         id: `groq-${i}-${Date.now()}`
       })),
-      sources: [{ title: "M365 Official Roadmap", uri: "https://www.microsoft.com/microsoft-365/roadmap" }]
+      sources: sources.length > 0 ? sources : [{ title: "M365 Official Roadmap", uri: "https://www.microsoft.com/microsoft-365/roadmap" }]
     };
   } catch (error: any) {
     console.error("Groq attempt failed", error);

@@ -18,16 +18,41 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
 
-  const getCategoryCount = (cat: string) => 
-    updates.filter(u => u.category.toLowerCase() === cat.toLowerCase()).length;
-
-  const chartData = [
-    { name: 'Azure', count: getCategoryCount('Azure') },
-    { name: 'M365', count: getCategoryCount('M365') },
-    { name: 'Security', count: getCategoryCount('Security') },
-  ];
-
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
+
+  // Consolidate stat calculations into a single O(N) pass, memoized for performance.
+  // This avoids multiple filter passes when the parent re-renders (e.g., during search).
+  const stats = useMemo(() => {
+    let gaCount = 0;
+    let previewCount = 0;
+    let azureCount = 0;
+    let m365Count = 0;
+    let securityCount = 0;
+
+    for (const u of updates) {
+      const cat = u.category.toLowerCase();
+      if (cat === 'azure') azureCount++;
+      else if (cat === 'm365') m365Count++;
+      else if (cat === 'security') securityCount++;
+
+      const status = u.status;
+      if (status.includes('Availability')) gaCount++;
+      if (status.includes('Preview')) previewCount++;
+    }
+
+    return {
+      gaCount,
+      previewCount,
+      azureCount,
+      m365Count,
+      securityCount,
+      chartData: [
+        { name: 'Azure', count: azureCount },
+        { name: 'M365', count: m365Count },
+        { name: 'Security', count: securityCount },
+      ]
+    };
+  }, [updates]);
 
   const quarterInfo = useMemo(() => {
     const now = new Date();
@@ -36,10 +61,11 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   }, []);
 
   const filteredUpdates = useMemo(() => {
+    const query = searchQuery.toLowerCase();
     return updates.filter(update => {
       const matchesSearch =
-        update.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        update.description.toLowerCase().includes(searchQuery.toLowerCase());
+        update.title.toLowerCase().includes(query) ||
+        update.description.toLowerCase().includes(query);
 
       const matchesCategory =
         activeCategory === 'All' ||
@@ -78,19 +104,19 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
         <StatCard 
           icon={<CheckCircle2 className="text-green-600" />} 
           title="GA Status" 
-          value={updates.filter(u => u.status.includes('Availability')).length} 
+          value={stats.gaCount}
           trend="Production ready" 
         />
         <StatCard 
           icon={<Activity className="text-purple-600" />} 
           title="In Preview" 
-          value={updates.filter(u => u.status.includes('Preview')).length} 
+          value={stats.previewCount}
           trend="Roadmap items" 
         />
         <StatCard 
           icon={<ShieldAlert className="text-red-600" />} 
           title="Security Hits" 
-          value={getCategoryCount('Security')} 
+          value={stats.securityCount}
           trend="High priority" 
         />
       </div>
@@ -174,13 +200,13 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
             <h3 className="text-sm font-semibold text-slate-900 mb-6 uppercase tracking-wider">Distribution</h3>
             <div className="h-64">
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={chartData}>
+                <BarChart data={stats.chartData}>
                   <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
                   <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
                   <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
                   <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
                   <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {chartData.map((entry, index) => (
+                    {stats.chartData.map((entry, index) => (
                       <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
                     ))}
                   </Bar>

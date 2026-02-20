@@ -1,5 +1,5 @@
 
-import React from 'react';
+import React, { memo } from 'react';
 import { CloudUpdate } from '../types';
 import { ExternalLink, Calendar, Info, Tag } from 'lucide-react';
 
@@ -7,7 +7,7 @@ interface UpdateCardProps {
   update: CloudUpdate;
 }
 
-const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
+const UpdateCard = memo(({ update }: UpdateCardProps) => {
   const categoryStyles = {
     Azure: 'bg-blue-50 text-blue-700 border-blue-100',
     M365: 'bg-purple-50 text-purple-700 border-purple-100',
@@ -65,6 +65,6 @@ const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
       </div>
     </div>
   );
-};
+});
 
 export default UpdateCard;

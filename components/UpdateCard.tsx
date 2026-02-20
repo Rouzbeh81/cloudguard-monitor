@@ -57,7 +57,8 @@ const UpdateCard: React.FC<UpdateCardProps> = ({ update }) => {
           href={update.url} 
           target="_blank" 
           rel="noopener noreferrer"
-          className="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-700"
+          aria-label={`Read documentation for ${update.title} (opens in new tab)`}
+          className="inline-flex items-center text-xs font-semibold text-blue-600 hover:text-blue-700 focus-visible:ring-2 focus-visible:ring-blue-500 focus-visible:ring-offset-2 rounded"
         >
           Documentation
           <ExternalLink className="w-3 h-3 ml-1.5" />

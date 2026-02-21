@@ -2,3 +2,8 @@
 **Vulnerability:** Potential XSS via `javascript:` protocol in AI-generated URLs.
 **Learning:** Even if an LLM is instructed to provide valid deep links, it can hallucinate or be manipulated to return malicious protocols like `javascript:`. If these URLs are rendered directly in an `<a>` tag's `href` attribute, it leads to Cross-Site Scripting (XSS).
 **Prevention:** Always sanitize and validate URLs returned by AI models or external APIs. Enforce a strict allowlist of protocols (e.g., `http:`, `https:`) before rendering them.
+
+## 2026-05-22 - Mailto Header Injection via User Input
+**Vulnerability:** Mail header injection in `mailto:` links through unsanitized recipient email.
+**Learning:** Concatenating user-controlled strings directly into `mailto:` URIs without stripping CRLF or query characters (`?`, `&`) allows attackers to inject additional headers (like `CC`, `BCC`) or overwrite the email body.
+**Prevention:** Sanitize recipient strings by removing dangerous characters and validating the email format before constructing the `mailto:` URI.

@@ -30,6 +30,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
 
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [emailError, setEmailError] = useState(false);
 
   useEffect(() => {
     const savedSettings = localStorage.getItem('cloudguard_alerts');
@@ -43,6 +44,14 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
   }, []);
 
   const handleSave = () => {
+    // Security: Validate email format before saving to ensure reliable delivery
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (settings.recipientEmail && !emailRegex.test(settings.recipientEmail.trim())) {
+      setEmailError(true);
+      return;
+    }
+
+    setEmailError(false);
     setSaving(true);
     localStorage.setItem('cloudguard_alerts', JSON.stringify(settings));
 
@@ -179,11 +188,18 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                 placeholder="Enter your email address"
                 aria-label="Recipient email address"
                 value={settings.recipientEmail}
-                onChange={(e) => setSettings(s => ({ ...s, recipientEmail: e.target.value }))}
-                className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
+                onChange={(e) => {
+                  setSettings(s => ({ ...s, recipientEmail: e.target.value }));
+                  if (emailError) setEmailError(false);
+                }}
+                className={`block w-full pl-10 pr-3 py-2.5 border rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:border-transparent transition-all bg-white shadow-sm ${emailError ? 'border-red-500 focus:ring-red-500/20' : 'border-slate-200 focus:ring-blue-500'}`}
               />
             </div>
-            <p className="mt-2 text-[10px] text-slate-400 italic">This address will be used for all automated and manual email reports.</p>
+            {emailError ? (
+              <p className="mt-2 text-[10px] text-red-600 font-bold">Please enter a valid email address.</p>
+            ) : (
+              <p className="mt-2 text-[10px] text-slate-400 italic">This address will be used for all automated and manual email reports.</p>
+            )}
           </div>
 
           <div className="space-y-1 mb-6">

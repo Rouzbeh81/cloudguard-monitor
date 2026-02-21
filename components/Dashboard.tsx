@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useDeferredValue, memo } from 'react';
 import { CloudUpdate, SummaryReport } from '../types';
 import UpdateCard from './UpdateCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock } from 'lucide-react';
+import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, LucideIcon } from 'lucide-react';
 
 interface DashboardProps {
   updates: CloudUpdate[];
@@ -17,6 +17,10 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
+
+  // Use deferred value for the search query to keep the UI responsive during typing.
+  // This allows React to prioritize the search input update over the list filtering.
+  const deferredSearchQuery = useDeferredValue(searchQuery);
 
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
@@ -61,7 +65,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   }, []);
 
   const filteredUpdates = useMemo(() => {
-    const query = searchQuery.toLowerCase();
+    const query = deferredSearchQuery.toLowerCase();
     return updates.filter(update => {
       const matchesSearch =
         update.title.toLowerCase().includes(query) ||
@@ -73,7 +77,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
 
       return matchesSearch && matchesCategory;
     });
-  }, [updates, searchQuery, activeCategory]);
+  }, [updates, deferredSearchQuery, activeCategory]);
 
   if (loading && updates.length === 0) {
     return (
@@ -96,25 +100,29 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
       {/* Stats Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard 
-          icon={<Layers className="text-blue-600" />} 
+          icon={Layers}
+          iconColor="text-blue-600"
           title="Total Updates" 
           value={updates.length} 
           trend="Real-time stream" 
         />
         <StatCard 
-          icon={<CheckCircle2 className="text-green-600" />} 
+          icon={CheckCircle2}
+          iconColor="text-green-600"
           title="GA Status" 
           value={stats.gaCount}
           trend="Production ready" 
         />
         <StatCard 
-          icon={<Activity className="text-purple-600" />} 
+          icon={Activity}
+          iconColor="text-purple-600"
           title="In Preview" 
           value={stats.previewCount}
           trend="Roadmap items" 
         />
         <StatCard 
-          icon={<ShieldAlert className="text-red-600" />} 
+          icon={ShieldAlert}
+          iconColor="text-red-600"
           title="Security Hits" 
           value={stats.securityCount}
           trend="High priority" 
@@ -196,24 +204,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
 
         {/* Sidebar Charts/Summary */}
         <div className="space-y-6">
-          <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
-            <h3 className="text-sm font-semibold text-slate-900 mb-6 uppercase tracking-wider">Distribution</h3>
-            <div className="h-64">
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart data={stats.chartData}>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
-                  <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
-                  <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
-                  <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
-                  <Bar dataKey="count" radius={[4, 4, 0, 0]}>
-                    {stats.chartData.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
-            </div>
-          </div>
+          <DistributionChart data={stats.chartData} />
 
           <div className="bg-gradient-to-br from-slate-900 to-slate-800 p-6 rounded-xl text-white shadow-lg relative overflow-hidden">
             <div className="absolute top-0 right-0 p-4 opacity-10">
@@ -240,16 +231,19 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
 };
 
 interface StatCardProps {
-  icon: React.ReactNode;
+  icon: LucideIcon;
+  iconColor: string;
   title: string;
   value: number | string;
   trend: string;
 }
 
-const StatCard: React.FC<StatCardProps> = ({ icon, title, value, trend }) => (
+// Memoized StatCard prevents re-renders when parent state (like search) changes.
+// Using stable icon component references instead of JSX elements ensures memoization works effectively.
+const StatCard = memo(({ icon: Icon, iconColor, title, value, trend }: StatCardProps) => (
   <div className="bg-white p-5 rounded-xl border border-slate-200 shadow-sm flex items-start gap-4">
     <div className="p-2.5 bg-slate-50 rounded-lg">
-      {icon}
+      <Icon className={`w-5 h-5 ${iconColor}`} />
     </div>
     <div>
       <p className="text-sm font-medium text-slate-500">{title}</p>
@@ -259,6 +253,32 @@ const StatCard: React.FC<StatCardProps> = ({ icon, title, value, trend }) => (
       </div>
     </div>
   </div>
-);
+));
+
+// Memoized DistributionChart skips expensive Recharts re-renders during search/filtering.
+const DistributionChart = memo(({ data }: { data: any[] }) => {
+  const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
+
+  return (
+    <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm">
+      <h3 className="text-sm font-semibold text-slate-900 mb-6 uppercase tracking-wider">Distribution</h3>
+      <div className="h-64">
+        <ResponsiveContainer width="100%" height="100%">
+          <BarChart data={data}>
+            <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#f1f5f9" />
+            <XAxis dataKey="name" axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} />
+            <YAxis axisLine={false} tickLine={false} tick={{fill: '#64748b', fontSize: 12}} allowDecimals={false} />
+            <Tooltip cursor={{fill: '#f8fafc'}} contentStyle={{borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1)'}} />
+            <Bar dataKey="count" radius={[4, 4, 0, 0]}>
+              {data.map((entry, index) => (
+                <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+              ))}
+            </Bar>
+          </BarChart>
+        </ResponsiveContainer>
+      </div>
+    </div>
+  );
+});
 
 export default Dashboard;

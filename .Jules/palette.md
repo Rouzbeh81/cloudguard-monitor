@@ -13,3 +13,7 @@
 ## 2026-05-20 - [Semantic Modal Attributes]
 **Learning:** Even if a modal visually looks like a dialog, it must explicitly use `role="dialog"` and `aria-modal="true"` to be correctly announced by assistive technologies. Linking the dialog to its title via `aria-labelledby` ensures immediate context for screen reader users.
 **Action:** Standardize modal components to include these three ARIA attributes by default.
+
+## 2026-05-21 - [Semantic Empty States]
+**Learning:** Differentiating between a completely empty dataset ("No Updates Found") and a filtered result set that is empty ("No matches found") prevents user confusion. Providing a "Clear all filters" call-to-action in the latter case significantly improves recovery speed.
+**Action:** Always implement context-aware empty states for searchable/filterable views.

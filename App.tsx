@@ -111,6 +111,12 @@ const App: React.FC = () => {
       } catch (e) {}
     }
 
+    // Security: Sanitize recipient to prevent mail header injection or malicious protocol usage
+    // We remove CRLF, and query characters that could allow parameter injection.
+    const sanitizedRecipient = recipient.trim().replace(/[\r\n?&]/g, '');
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    const finalRecipient = emailRegex.test(sanitizedRecipient) ? sanitizedRecipient : "";
+
     // Handmatige datum formattering naar DD-MM-YYYY
     const now = new Date();
     const day = String(now.getDate()).padStart(2, '0');
@@ -132,7 +138,7 @@ const App: React.FC = () => {
       setAutomationTriggered(false);
     }
 
-    window.location.href = `mailto:${recipient}?subject=${subject}&body=${body}`;
+    window.location.href = `mailto:${finalRecipient}?subject=${subject}&body=${body}`;
   };
 
   // Cache Loader & Automated Schedule Checker

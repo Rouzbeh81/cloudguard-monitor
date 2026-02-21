@@ -13,19 +13,25 @@ interface FetchOptions {
 }
 
 /**
+ * Security: Sanitizes a URL by enforcing a strict protocol allowlist.
+ * This prevents javascript: XSS and other malicious protocol injections.
+ */
+const sanitizeUrl = (url: string | undefined | null): string => {
+  if (!url) return "https://azure.microsoft.com/updates/";
+  const trimmed = url.trim();
+  const isSafe = trimmed.toLowerCase().startsWith('http://') || trimmed.toLowerCase().startsWith('https://');
+  return isSafe ? trimmed : "https://azure.microsoft.com/updates/";
+};
+
+/**
  * Ensures that the updates have deep links, valid categories, and safe protocols.
  */
 const ensureDeepLinks = (updates: any[]): any[] => {
   const VALID_CATEGORIES = ['Azure', 'M365', 'Security'];
 
   return updates.map(u => {
-    let url = u.url || "";
-
     // Security: Validate URL protocol to prevent javascript: XSS
-    const isSafeProtocol = url.toLowerCase().startsWith('http://') || url.toLowerCase().startsWith('https://');
-    if (!isSafeProtocol) {
-      url = "https://azure.microsoft.com/updates/"; // Safe fallback
-    }
+    const url = sanitizeUrl(u.url);
 
     // Security: Validate Category to prevent UI breakage or unexpected states
     const category = VALID_CATEGORIES.includes(u.category) ? u.category : 'Azure';
@@ -176,11 +182,9 @@ const handleGemini = async (apiKey: string, systemInstruction: string, retryCoun
     const sources = chunks
       .filter(chunk => chunk.web)
       .map(chunk => {
-        const uri = chunk.web?.uri || "";
-        const isSafe = uri.toLowerCase().startsWith('http://') || uri.toLowerCase().startsWith('https://');
         return {
           title: chunk.web?.title || "Microsoft Source",
-          uri: isSafe ? uri : "https://azure.microsoft.com/updates/"
+          uri: sanitizeUrl(chunk.web?.uri)
         };
       });
 
@@ -248,10 +252,9 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
 
     // Sanitize sources if AI returned any in the future (currently hardcoded but good practice)
     const sources = (parsedResponse.sources || []).map((s: any) => {
-      const isSafe = s.uri?.toLowerCase().startsWith('http://') || s.uri?.toLowerCase().startsWith('https://');
       return {
         title: s.title || "Microsoft Source",
-        uri: isSafe ? s.uri : "https://azure.microsoft.com/updates/"
+        uri: sanitizeUrl(s.uri)
       };
     });
 

@@ -33,7 +33,8 @@ const SummaryModal: React.FC<SummaryModalProps> = ({ report, onClose }) => {
           </div>
           <button 
             onClick={onClose}
-            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors"
+            aria-label="Close modal"
+            className="p-2 text-slate-400 hover:text-slate-600 hover:bg-slate-100 rounded-full transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
           >
             <X className="w-5 h-5" />
           </button>

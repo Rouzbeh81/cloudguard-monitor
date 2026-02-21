@@ -86,7 +86,11 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
       <div className="bg-white rounded-2xl w-full max-w-md shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         <div className="px-6 py-4 bg-slate-50 border-b border-slate-200 flex justify-between items-center">
           <h3 id="modal-title" className="font-bold text-slate-900">Configure Notification Alerts</h3>
-          <button onClick={onClose} className="p-2 text-slate-400 hover:text-slate-600 rounded-full" aria-label="Close modal">
+          <button
+            onClick={onClose}
+            className="p-2 text-slate-400 hover:text-slate-600 rounded-full focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2"
+            aria-label="Close modal"
+          >
             <X className="w-5 h-5" />
           </button>
         </div>

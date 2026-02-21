@@ -158,7 +158,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
                 key={cat}
                 onClick={() => setActiveCategory(cat)}
                 aria-pressed={activeCategory === cat}
-                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all ${
+                className={`px-4 py-1.5 rounded-full text-xs font-bold transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-slate-500 focus-visible:ring-offset-2 ${
                   activeCategory === cat
                     ? 'bg-slate-900 text-white shadow-md'
                     : 'bg-white text-slate-600 border border-slate-200 hover:border-slate-300'
@@ -174,6 +174,22 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
               filteredUpdates.map((update) => (
                 <UpdateCard key={update.id} update={update} />
               ))
+            ) : updates.length > 0 ? (
+              <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-16 text-center shadow-sm">
+                <div className="max-w-xs mx-auto">
+                  <div className="w-16 h-16 bg-slate-50 rounded-full flex items-center justify-center mx-auto mb-4">
+                    <Search className="w-8 h-8 text-slate-300" />
+                  </div>
+                  <h3 className="text-slate-900 font-bold mb-1">No matches found</h3>
+                  <p className="text-slate-500 text-sm mb-6">We couldn't find any updates matching your current search or category filters.</p>
+                  <button
+                    onClick={() => {setSearchQuery(''); setActiveCategory('All');}}
+                    className="text-sm font-bold text-blue-600 hover:text-blue-700 focus-visible:underline focus:outline-none"
+                  >
+                    Clear all filters
+                  </button>
+                </div>
+              </div>
             ) : (
               <div className="bg-white border border-dashed border-slate-300 rounded-2xl p-16 text-center shadow-sm">
                 <div className="max-w-xs mx-auto">
@@ -184,7 +200,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
                   <p className="text-slate-500 text-sm mb-6">We couldn't parse any recent updates. Try refreshing the sync or check your connection.</p>
                   <button 
                     onClick={() => window.location.reload()}
-                    className="text-sm font-bold text-blue-600 hover:text-blue-700"
+                    className="text-sm font-bold text-blue-600 hover:text-blue-700 focus-visible:underline focus:outline-none"
                   >
                     Force Refresh
                   </button>

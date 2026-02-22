@@ -134,6 +134,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                     type="password"
                     placeholder="Enter Gemini API Key"
                     aria-label="Gemini API Key"
+                    maxLength={200}
                     value={settings.geminiApiKey}
                     onChange={(e) => setSettings(s => ({ ...s, geminiApiKey: e.target.value }))}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-all bg-white shadow-sm"
@@ -161,6 +162,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                     type="password"
                     placeholder="Enter Groq API Key"
                     aria-label="Groq API Key"
+                    maxLength={200}
                     value={settings.groqApiKey}
                     onChange={(e) => setSettings(s => ({ ...s, groqApiKey: e.target.value }))}
                     className="block w-full pl-10 pr-3 py-2.5 border border-slate-200 rounded-xl text-sm text-slate-900 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent transition-all bg-white shadow-sm"
@@ -191,6 +193,7 @@ const AlertsModal: React.FC<AlertsModalProps> = ({ onClose }) => {
                 type="email"
                 placeholder="Enter your email address"
                 aria-label="Recipient email address"
+                maxLength={254}
                 value={settings.recipientEmail}
                 onChange={(e) => {
                   setSettings(s => ({ ...s, recipientEmail: e.target.value }));

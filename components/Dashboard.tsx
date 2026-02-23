@@ -25,7 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
   // Consolidate stat calculations into a single O(N) pass, memoized for performance.
-  // This avoids multiple filter passes when the parent re-renders (e.g., during search).
+  // Using exact string comparison for categories avoids redundant toLowerCase() calls.
   const stats = useMemo(() => {
     let gaCount = 0;
     let previewCount = 0;
@@ -34,10 +34,10 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
     let securityCount = 0;
 
     for (const u of updates) {
-      const cat = u.category.toLowerCase();
-      if (cat === 'azure') azureCount++;
-      else if (cat === 'm365') m365Count++;
-      else if (cat === 'security') securityCount++;
+      const cat = u.category;
+      if (cat === 'Azure') azureCount++;
+      else if (cat === 'M365') m365Count++;
+      else if (cat === 'Security') securityCount++;
 
       const status = u.status;
       if (status.includes('Availability')) gaCount++;
@@ -64,18 +64,27 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
     return `Q${q} ${now.getFullYear()}`;
   }, []);
 
+  // Optimized filtering:
+  // 1. Early return for default state (O(1) vs O(N))
+  // 2. Short-circuit: Check category first (cheap)
+  // 3. Only perform expensive string search if there's a query
   const filteredUpdates = useMemo(() => {
+    if (!deferredSearchQuery && activeCategory === 'All') {
+      return updates;
+    }
+
     const query = deferredSearchQuery.toLowerCase();
+
     return updates.filter(update => {
-      const matchesSearch =
+      const matchesCategory = activeCategory === 'All' || update.category === activeCategory;
+      if (!matchesCategory) return false;
+
+      if (!query) return true;
+
+      return (
         update.title.toLowerCase().includes(query) ||
-        update.description.toLowerCase().includes(query);
-
-      const matchesCategory =
-        activeCategory === 'All' ||
-        update.category.toLowerCase() === activeCategory.toLowerCase();
-
-      return matchesSearch && matchesCategory;
+        update.description.toLowerCase().includes(query)
+      );
     });
   }, [updates, deferredSearchQuery, activeCategory]);
 

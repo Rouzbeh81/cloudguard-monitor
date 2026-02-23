@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo, useDeferredValue, memo } from 'react';
+import React, { useState, useMemo, useDeferredValue, memo, useRef, useEffect } from 'react';
 import { CloudUpdate, SummaryReport } from '../types';
 import UpdateCard from './UpdateCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, LucideIcon } from 'lucide-react';
+import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, X, LucideIcon } from 'lucide-react';
 
 interface DashboardProps {
   updates: CloudUpdate[];
@@ -17,6 +17,22 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const [isSearchFocused, setIsSearchFocused] = useState(false);
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Implement the 'slash to search' keyboard shortcut.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Focus search input on '/' if not already typing in an input/textarea
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Use deferred value for the search query to keep the UI responsive during typing.
   // This allows React to prioritize the search input update over the list filtering.
@@ -150,13 +166,30 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search updates..."
                 aria-label="Search updates"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
+                onFocus={() => setIsSearchFocused(true)}
+                onBlur={() => setIsSearchFocused(false)}
+                className="pl-9 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
               />
+              {searchQuery && (
+                <button
+                  onClick={() => setSearchQuery('')}
+                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors"
+                  aria-label="Clear search"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              )}
+              {!searchQuery && !isSearchFocused && (
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
+                  <kbd className="px-1.5 py-0.5 text-[10px] font-sans font-semibold text-slate-400 border border-slate-200 rounded bg-slate-50 uppercase shadow-sm">/</kbd>
+                </div>
+              )}
             </div>
           </div>
 

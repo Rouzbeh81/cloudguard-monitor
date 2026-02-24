@@ -52,8 +52,13 @@ const ensureDeepLinks = (updates: any[]): any[] => {
  * This is 100% free and robust.
  */
 const fetchM365Direct = async (): Promise<any[]> => {
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
-    const response = await fetch('https://www.microsoft.com/releasecommunications/api/v1/m365');
+    const response = await fetch('https://www.microsoft.com/releasecommunications/api/v1/m365', {
+      signal: controller.signal
+    });
     if (!response.ok) return [];
     const data = await response.json();
     // Take more items for better quarterly coverage (max 100)
@@ -61,6 +66,8 @@ const fetchM365Direct = async (): Promise<any[]> => {
   } catch (e) {
     console.error("Failed to fetch M365 direct updates", e);
     return [];
+  } finally {
+    clearTimeout(timeoutId);
   }
 };
 
@@ -223,6 +230,9 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
     Ensure every M365 update uses the Roadmap URL with the correct ID.
   `;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
     const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -238,7 +248,8 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
         ],
         temperature: 0.1,
         response_format: { type: "json_object" }
-      })
+      }),
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -274,5 +285,7 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
       return fetchCloudUpdates(options, retryCount + 1);
     }
     throw new Error(error.message || "Groq Intelligence failed. Check your API key and connection.");
+  } finally {
+    clearTimeout(timeoutId);
   }
 };

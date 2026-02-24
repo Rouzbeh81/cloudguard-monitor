@@ -13,7 +13,7 @@ interface DashboardProps {
   onOpenAlerts: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSynced, onOpenAlerts }) => {
+const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: DashboardProps) => {
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -25,7 +25,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
   // Consolidate stat calculations into a single O(N) pass, memoized for performance.
-  // This avoids multiple filter passes when the parent re-renders (e.g., during search).
+  // Performance: Uses exact string matching for categories and status to avoid .toLowerCase() and .includes() overhead.
   const stats = useMemo(() => {
     let gaCount = 0;
     let previewCount = 0;
@@ -34,14 +34,14 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
     let securityCount = 0;
 
     for (const u of updates) {
-      const cat = u.category.toLowerCase();
-      if (cat === 'azure') azureCount++;
-      else if (cat === 'm365') m365Count++;
-      else if (cat === 'security') securityCount++;
+      const cat = u.category;
+      if (cat === 'Azure') azureCount++;
+      else if (cat === 'M365') m365Count++;
+      else if (cat === 'Security') securityCount++;
 
       const status = u.status;
-      if (status.includes('Availability')) gaCount++;
-      if (status.includes('Preview')) previewCount++;
+      if (status === 'General Availability') gaCount++;
+      else if (status === 'Public Preview') previewCount++;
     }
 
     return {
@@ -66,16 +66,21 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
 
   const filteredUpdates = useMemo(() => {
     const query = deferredSearchQuery.toLowerCase();
-    return updates.filter(update => {
-      const matchesSearch =
-        update.title.toLowerCase().includes(query) ||
-        update.description.toLowerCase().includes(query);
 
+    // Performance: Short-circuiting and avoiding redundant .toLowerCase() calls.
+    // We check category first (cheap) before doing expensive string searching.
+    return updates.filter(update => {
       const matchesCategory =
         activeCategory === 'All' ||
-        update.category.toLowerCase() === activeCategory.toLowerCase();
+        update.category === activeCategory;
 
-      return matchesSearch && matchesCategory;
+      if (!matchesCategory) return false;
+      if (!query) return true;
+
+      return (
+        update.title.toLowerCase().includes(query) ||
+        update.description.toLowerCase().includes(query)
+      );
     });
   }, [updates, deferredSearchQuery, activeCategory]);
 
@@ -244,7 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
       </div>
     </div>
   );
-};
+});
 
 interface StatCardProps {
   icon: LucideIcon;

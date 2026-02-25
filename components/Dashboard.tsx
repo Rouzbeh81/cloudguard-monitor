@@ -65,17 +65,22 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   }, []);
 
   const filteredUpdates = useMemo(() => {
+    if (!deferredSearchQuery && activeCategory === 'All') return updates;
+
     const query = deferredSearchQuery.toLowerCase();
+    const targetCategory = activeCategory.toLowerCase();
+
     return updates.filter(update => {
-      const matchesSearch =
-        update.title.toLowerCase().includes(query) ||
-        update.description.toLowerCase().includes(query);
+      // 1. Quick category short-circuit to skip expensive search on non-matching categories
+      if (targetCategory !== 'all' && update.category.toLowerCase() !== targetCategory) {
+        return false;
+      }
 
-      const matchesCategory =
-        activeCategory === 'All' ||
-        update.category.toLowerCase() === activeCategory.toLowerCase();
+      // 2. Search check only if query exists and category matched
+      if (!query) return true;
 
-      return matchesSearch && matchesCategory;
+      return update.title.toLowerCase().includes(query) ||
+             update.description.toLowerCase().includes(query);
     });
   }, [updates, deferredSearchQuery, activeCategory]);
 

@@ -37,6 +37,20 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
   // This allows React to prioritize the search input update over the list filtering.
   const deferredSearchQuery = useDeferredValue(searchQuery);
 
+  // Implement the 'slash to search' keyboard shortcut.
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      // Focus the search input when the '/' key is pressed, but only if not already in an input.
+      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        inputRef.current?.focus();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
+
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
   // Consolidate stat calculations into a single O(N) pass, memoized for performance.

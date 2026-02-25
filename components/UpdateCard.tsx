@@ -7,13 +7,14 @@ interface UpdateCardProps {
   update: CloudUpdate;
 }
 
-const CATEGORY_STYLES = {
+// Static style maps moved outside to prevent recreation on every render
+const CATEGORY_STYLES: Record<string, string> = {
   Azure: 'bg-blue-50 text-blue-700 border-blue-100',
   M365: 'bg-purple-50 text-purple-700 border-purple-100',
   Security: 'bg-red-50 text-red-700 border-red-100'
 };
 
-const STATUS_STYLES = {
+const STATUS_STYLES: Record<string, string> = {
   'General Availability': 'bg-green-50 text-green-700',
   'Public Preview': 'bg-yellow-50 text-yellow-700',
   'Development': 'bg-slate-100 text-slate-600',
@@ -25,10 +26,10 @@ const UpdateCard = memo(({ update }: UpdateCardProps) => {
     <div className="group bg-white border border-slate-200 rounded-xl p-5 hover:border-blue-400 hover:shadow-md transition-all duration-200">
       <div className="flex flex-col sm:flex-row justify-between items-start gap-4 mb-3">
         <div className="flex items-center gap-2">
-          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${CATEGORY_STYLES[update.category]}`}>
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider border ${CATEGORY_STYLES[update.category] || 'bg-slate-50'}`}>
             {update.category}
           </span>
-          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[update.status]}`}>
+          <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold uppercase tracking-wider ${STATUS_STYLES[update.status] || 'bg-slate-50'}`}>
             {update.status}
           </span>
         </div>

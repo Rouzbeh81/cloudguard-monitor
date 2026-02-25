@@ -285,7 +285,7 @@ const App: React.FC = () => {
           report={state.report} 
           loading={state.loading}
           lastSynced={lastSynced}
-          onOpenAlerts={() => setIsAlertsOpen(true)}
+          onOpenAlerts={useCallback(() => setIsAlertsOpen(true), [])}
         />
       </main>
 

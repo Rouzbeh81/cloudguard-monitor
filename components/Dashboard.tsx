@@ -13,7 +13,7 @@ interface DashboardProps {
   onOpenAlerts: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSynced, onOpenAlerts }) => {
+const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: DashboardProps) => {
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -55,8 +55,8 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
       else if (cat === 'Security') securityCount++;
 
       const status = u.status;
-      if (status.includes('Availability')) gaCount++;
-      if (status.includes('Preview')) previewCount++;
+      if (status === 'General Availability') gaCount++;
+      else if (status === 'Public Preview') previewCount++;
     }
 
     return {
@@ -285,7 +285,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
       </div>
     </div>
   );
-};
+});
 
 interface StatCardProps {
   icon: LucideIcon;

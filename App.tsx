@@ -22,6 +22,9 @@ const App: React.FC = () => {
   const [automationTriggered, setAutomationTriggered] = useState(false);
   const [apiKeyMissing, setApiKeyMissing] = useState(false);
 
+  // Memoize callbacks passed to memoized components to maintain stable references
+  const handleOpenAlerts = useCallback(() => setIsAlertsOpen(true), []);
+
   const checkApiKey = useCallback(() => {
     const stored = localStorage.getItem('cloudguard_alerts');
     const hasGeminiEnv = !!process.env.API_KEY && process.env.API_KEY !== "undefined";
@@ -285,7 +288,7 @@ const App: React.FC = () => {
           report={state.report} 
           loading={state.loading}
           lastSynced={lastSynced}
-          onOpenAlerts={() => setIsAlertsOpen(true)}
+          onOpenAlerts={useCallback(() => setIsAlertsOpen(true), [])}
         />
       </main>
 

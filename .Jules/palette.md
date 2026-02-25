@@ -18,6 +18,6 @@
 **Learning:** Differentiating between a completely empty dataset ("No Updates Found") and a filtered result set that is empty ("No matches found") prevents user confusion. Providing a "Clear all filters" call-to-action in the latter case significantly improves recovery speed.
 **Action:** Always implement context-aware empty states for searchable/filterable views.
 
-## 2026-05-22 - [Keyboard Shortcut Hijacking]
-**Learning:** Global keyboard shortcuts (like '/' for search) must include explicit checks for `document.activeElement` to prevent hijacking focus when the user is already typing in an `input` or `textarea`. This avoids unexpected cursor jumps and input disruption.
-**Action:** Always guard global keydown listeners with `tagName` checks before performing programmatic focus or navigation.
+## 2026-05-22 - [Search Accessibility and Shortcuts]
+**Learning:** Implementing the 'slash to search' shortcut improves dashboard efficiency for power users. Pairing it with a subtle visual `<kbd>` hint that fades out on focus provides clear affordance without visual clutter. Adding a 'Clear search' button within the input further streamlines the filtering experience.
+**Action:** Standardize search inputs to include the '/' shortcut hint and a functional clear button with an `aria-label`.

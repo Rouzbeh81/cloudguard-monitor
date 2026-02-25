@@ -18,6 +18,6 @@
 **Learning:** Differentiating between a completely empty dataset ("No Updates Found") and a filtered result set that is empty ("No matches found") prevents user confusion. Providing a "Clear all filters" call-to-action in the latter case significantly improves recovery speed.
 **Action:** Always implement context-aware empty states for searchable/filterable views.
 
-## 2026-05-22 - [Search Shortcuts and Guardrails]
-**Learning:** Implementing a global keyboard shortcut (like `/`) requires guarding against accidental activation when the user is already focused on an input or textarea. Checking `document.activeElement.tagName` provides a simple but effective safety check.
-**Action:** When adding global keyboard listeners, ensure they don't interfere with existing interactive elements.
+## 2026-05-22 - [Search Accessibility and Shortcuts]
+**Learning:** Implementing the 'slash to search' shortcut improves dashboard efficiency for power users. Pairing it with a subtle visual `<kbd>` hint that fades out on focus provides clear affordance without visual clutter. Adding a 'Clear search' button within the input further streamlines the filtering experience.
+**Action:** Standardize search inputs to include the '/' shortcut hint and a functional clear button with an `aria-label`.

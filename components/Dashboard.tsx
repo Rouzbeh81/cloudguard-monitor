@@ -3,7 +3,7 @@ import React, { useState, useMemo, useDeferredValue, memo, useRef, useEffect } f
 import { CloudUpdate, SummaryReport } from '../types';
 import UpdateCard from './UpdateCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, X, LucideIcon } from 'lucide-react';
+import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, LucideIcon, X } from 'lucide-react';
 
 interface DashboardProps {
   updates: CloudUpdate[];
@@ -17,19 +17,18 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
-  const [isSearchFocused, setIsSearchFocused] = useState(false);
   const searchInputRef = useRef<HTMLInputElement>(null);
 
-  // Implement the 'slash to search' keyboard shortcut.
+  // Keyboard shortcut listener for focusing search
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      // Focus search input on '/' if not already typing in an input/textarea
-      if (e.key === '/' && document.activeElement?.tagName !== 'INPUT' && document.activeElement?.tagName !== 'TEXTAREA') {
+      if (e.key === '/' &&
+          document.activeElement?.tagName !== 'INPUT' &&
+          document.activeElement?.tagName !== 'TEXTAREA') {
         e.preventDefault();
         searchInputRef.current?.focus();
       }
     };
-
     window.addEventListener('keydown', handleKeyDown);
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, []);
@@ -41,7 +40,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
   // Consolidate stat calculations into a single O(N) pass, memoized for performance.
-  // This avoids multiple filter passes when the parent re-renders (e.g., during search).
+  // Using exact string comparison for categories avoids redundant toLowerCase() calls.
   const stats = useMemo(() => {
     let gaCount = 0;
     let previewCount = 0;
@@ -50,10 +49,10 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
     let securityCount = 0;
 
     for (const u of updates) {
-      const cat = u.category.toLowerCase();
-      if (cat === 'azure') azureCount++;
-      else if (cat === 'm365') m365Count++;
-      else if (cat === 'security') securityCount++;
+      const cat = u.category;
+      if (cat === 'Azure') azureCount++;
+      else if (cat === 'M365') m365Count++;
+      else if (cat === 'Security') securityCount++;
 
       const status = u.status;
       if (status.includes('Availability')) gaCount++;
@@ -80,18 +79,27 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
     return `Q${q} ${now.getFullYear()}`;
   }, []);
 
+  // Optimized filtering:
+  // 1. Early return for default state (O(1) vs O(N))
+  // 2. Short-circuit: Check category first (cheap)
+  // 3. Only perform expensive string search if there's a query
   const filteredUpdates = useMemo(() => {
+    if (!deferredSearchQuery && activeCategory === 'All') return updates;
+
     const query = deferredSearchQuery.toLowerCase();
+    const targetCategory = activeCategory.toLowerCase();
+
     return updates.filter(update => {
-      const matchesSearch =
-        update.title.toLowerCase().includes(query) ||
-        update.description.toLowerCase().includes(query);
+      // 1. Quick category short-circuit to skip expensive search on non-matching categories
+      if (targetCategory !== 'all' && update.category.toLowerCase() !== targetCategory) {
+        return false;
+      }
 
-      const matchesCategory =
-        activeCategory === 'All' ||
-        update.category.toLowerCase() === activeCategory.toLowerCase();
+      // 2. Search check only if query exists and category matched
+      if (!query) return true;
 
-      return matchesSearch && matchesCategory;
+      return update.title.toLowerCase().includes(query) ||
+             update.description.toLowerCase().includes(query);
     });
   }, [updates, deferredSearchQuery, activeCategory]);
 
@@ -172,24 +180,24 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
                 aria-label="Search updates"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                onFocus={() => setIsSearchFocused(true)}
-                onBlur={() => setIsSearchFocused(false)}
                 className="pl-9 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
               />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 p-0.5 text-slate-400 hover:text-slate-600 rounded-md hover:bg-slate-100 transition-colors"
-                  aria-label="Clear search"
-                >
-                  <X className="w-3.5 h-3.5" />
-                </button>
-              )}
-              {!searchQuery && !isSearchFocused && (
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 pointer-events-none hidden sm:block">
-                  <kbd className="px-1.5 py-0.5 text-[10px] font-sans font-semibold text-slate-400 border border-slate-200 rounded bg-slate-50 uppercase shadow-sm">/</kbd>
-                </div>
-              )}
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {!searchQuery && (
+                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-slate-200 bg-slate-50 px-1.5 font-sans text-[10px] font-medium text-slate-400 opacity-100 group-focus-within:opacity-0 transition-opacity">
+                    /
+                  </kbd>
+                )}
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

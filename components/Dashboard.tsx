@@ -13,7 +13,9 @@ interface DashboardProps {
   onOpenAlerts: () => void;
 }
 
-const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSynced, onOpenAlerts }) => {
+// Memoized Dashboard component prevents re-renders when parent state (like App modals) changes.
+// Using direct function typing for clean memoization.
+const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: DashboardProps) => {
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
@@ -34,10 +36,12 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
     let securityCount = 0;
 
     for (const u of updates) {
-      const cat = u.category.toLowerCase();
-      if (cat === 'azure') azureCount++;
-      else if (cat === 'm365') m365Count++;
-      else if (cat === 'security') securityCount++;
+      // Optimization: Using exact string comparisons for sanitized categories
+      // instead of .toLowerCase() to avoid unnecessary string allocations in the loop.
+      const cat = u.category;
+      if (cat === 'Azure') azureCount++;
+      else if (cat === 'M365') m365Count++;
+      else if (cat === 'Security') securityCount++;
 
       const status = u.status;
       if (status.includes('Availability')) gaCount++;
@@ -71,9 +75,10 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
         update.title.toLowerCase().includes(query) ||
         update.description.toLowerCase().includes(query);
 
+      // Optimization: Categories are pre-sanitized in service layer, allowing exact comparison.
       const matchesCategory =
         activeCategory === 'All' ||
-        update.category.toLowerCase() === activeCategory.toLowerCase();
+        update.category === activeCategory;
 
       return matchesSearch && matchesCategory;
     });
@@ -244,7 +249,7 @@ const Dashboard: React.FC<DashboardProps> = ({ updates, report, loading, lastSyn
       </div>
     </div>
   );
-};
+});
 
 interface StatCardProps {
   icon: LucideIcon;

@@ -1,5 +1,5 @@
 
-import React, { useState, useMemo, useDeferredValue, memo } from 'react';
+import React, { useState, useMemo, useDeferredValue, memo, useEffect, useRef } from 'react';
 import { CloudUpdate, SummaryReport } from '../types';
 import UpdateCard from './UpdateCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
@@ -19,6 +19,8 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
+
+  const inputRef = useRef<HTMLInputElement>(null);
 
   // Use deferred value for the search query to keep the UI responsive during typing.
   // This allows React to prioritize the search input update over the list filtering.
@@ -169,6 +171,7 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
+                ref={inputRef}
                 type="text"
                 placeholder="Search updates..."
                 aria-label="Search updates"

@@ -1,9 +1,9 @@
 
-import React, { useState, useMemo, useDeferredValue, memo } from 'react';
+import React, { useState, useMemo, useDeferredValue, memo, useRef, useEffect } from 'react';
 import { CloudUpdate, SummaryReport } from '../types';
 import UpdateCard from './UpdateCard';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, LucideIcon } from 'lucide-react';
+import { Layers, Activity, ShieldAlert, CheckCircle2, Search, Clock, LucideIcon, X } from 'lucide-react';
 
 interface DashboardProps {
   updates: CloudUpdate[];
@@ -17,6 +17,21 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
   // Integrated search and category-based filtering from main with accessibility enhancements.
   const [searchQuery, setSearchQuery] = useState('');
   const [activeCategory, setActiveCategory] = useState<string>('All');
+  const searchInputRef = useRef<HTMLInputElement>(null);
+
+  // Keyboard shortcut listener for focusing search
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === '/' &&
+          document.activeElement?.tagName !== 'INPUT' &&
+          document.activeElement?.tagName !== 'TEXTAREA') {
+        e.preventDefault();
+        searchInputRef.current?.focus();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, []);
 
   // Use deferred value for the search query to keep the UI responsive during typing.
   // This allows React to prioritize the search input update over the list filtering.
@@ -25,7 +40,7 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
   const COLORS = ['#2563eb', '#8b5cf6', '#ef4444'];
 
   // Consolidate stat calculations into a single O(N) pass, memoized for performance.
-  // Performance: Uses exact string matching for categories and status to avoid .toLowerCase() and .includes() overhead.
+  // Using exact string comparison for categories avoids redundant toLowerCase() calls.
   const stats = useMemo(() => {
     let gaCount = 0;
     let previewCount = 0;
@@ -64,23 +79,27 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
     return `Q${q} ${now.getFullYear()}`;
   }, []);
 
+  // Optimized filtering:
+  // 1. Early return for default state (O(1) vs O(N))
+  // 2. Short-circuit: Check category first (cheap)
+  // 3. Only perform expensive string search if there's a query
   const filteredUpdates = useMemo(() => {
+    if (!deferredSearchQuery && activeCategory === 'All') return updates;
+
     const query = deferredSearchQuery.toLowerCase();
+    const targetCategory = activeCategory.toLowerCase();
 
-    // Performance: Short-circuiting and avoiding redundant .toLowerCase() calls.
-    // We check category first (cheap) before doing expensive string searching.
     return updates.filter(update => {
-      const matchesCategory =
-        activeCategory === 'All' ||
-        update.category === activeCategory;
+      // 1. Quick category short-circuit to skip expensive search on non-matching categories
+      if (targetCategory !== 'all' && update.category.toLowerCase() !== targetCategory) {
+        return false;
+      }
 
-      if (!matchesCategory) return false;
+      // 2. Search check only if query exists and category matched
       if (!query) return true;
 
-      return (
-        update.title.toLowerCase().includes(query) ||
-        update.description.toLowerCase().includes(query)
-      );
+      return update.title.toLowerCase().includes(query) ||
+             update.description.toLowerCase().includes(query);
     });
   }, [updates, deferredSearchQuery, activeCategory]);
 
@@ -155,13 +174,30 @@ const Dashboard = memo(({ updates, report, loading, lastSynced, onOpenAlerts }: 
             <div className="relative group">
               <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 group-focus-within:text-blue-500 transition-colors" />
               <input
+                ref={searchInputRef}
                 type="text"
                 placeholder="Search updates..."
                 aria-label="Search updates"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="pl-9 pr-4 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
+                className="pl-9 pr-10 py-2 bg-white border border-slate-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-full sm:w-64 transition-all"
               />
+              <div className="absolute right-3 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                {!searchQuery && (
+                  <kbd className="hidden sm:inline-flex h-5 select-none items-center gap-1 rounded border border-slate-200 bg-slate-50 px-1.5 font-sans text-[10px] font-medium text-slate-400 opacity-100 group-focus-within:opacity-0 transition-opacity">
+                    /
+                  </kbd>
+                )}
+                {searchQuery && (
+                  <button
+                    onClick={() => setSearchQuery('')}
+                    className="p-0.5 hover:bg-slate-100 rounded-md text-slate-400 hover:text-slate-600 transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+                    aria-label="Clear search"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
+              </div>
             </div>
           </div>
 

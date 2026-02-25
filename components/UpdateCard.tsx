@@ -7,15 +7,13 @@ interface UpdateCardProps {
   update: CloudUpdate;
 }
 
-// Performance: Static style objects declared outside the memoized component to prevent
-// redundant object creation and potential shallow comparison failures during re-renders.
-const CATEGORY_STYLES: Record<string, string> = {
+const CATEGORY_STYLES = {
   Azure: 'bg-blue-50 text-blue-700 border-blue-100',
   M365: 'bg-purple-50 text-purple-700 border-purple-100',
   Security: 'bg-red-50 text-red-700 border-red-100'
 };
 
-const STATUS_STYLES: Record<string, string> = {
+const STATUS_STYLES = {
   'General Availability': 'bg-green-50 text-green-700',
   'Public Preview': 'bg-yellow-50 text-yellow-700',
   'Development': 'bg-slate-100 text-slate-600',

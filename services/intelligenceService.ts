@@ -251,6 +251,9 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
     Ensure every M365 update uses the Roadmap URL with the correct ID.
   `;
 
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 10000);
+
   try {
     const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
@@ -266,7 +269,8 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
         ],
         temperature: 0.1,
         response_format: { type: "json_object" }
-      })
+      }),
+      signal: controller.signal
     });
 
     if (!response.ok) {
@@ -303,5 +307,7 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
       return fetchCloudUpdates(options, retryCount + 1);
     }
     throw new Error(error.message || "Groq Intelligence failed. Check your API key and connection.");
+  } finally {
+    clearTimeout(timeoutId);
   }
 };

@@ -2,9 +2,28 @@ import { GoogleGenAI, GenerateContentResponse } from "@google/genai";
 import { CloudUpdate, SummaryReport } from "../types";
 
 const MAX_RETRIES = 1;
+const REQUEST_TIMEOUT = 10000; // 10 seconds timeout for external API requests
 const sleep = (ms: number) => new Promise(resolve => setTimeout(resolve, ms));
 
 export type AIProvider = 'gemini' | 'groq';
+
+/**
+ * Security: Helper to fetch with a timeout using AbortController.
+ * Prevents application hangs if external APIs are unresponsive.
+ */
+const fetchWithTimeout = async (url: string, options: RequestInit = {}) => {
+  const controller = new AbortController();
+  const id = setTimeout(() => controller.abort(), REQUEST_TIMEOUT);
+  try {
+    const response = await fetch(url, {
+      ...options,
+      signal: controller.signal
+    });
+    return response;
+  } finally {
+    clearTimeout(id);
+  }
+};
 
 interface FetchOptions {
   provider: AIProvider;
@@ -53,12 +72,13 @@ const ensureDeepLinks = (updates: any[]): any[] => {
  */
 const fetchM365Direct = async (): Promise<any[]> => {
   const controller = new AbortController();
-  const timeoutId = setTimeout(() => controller.abort(), 10000);
+  const timeoutId = setTimeout(() => controller.abort(), 10000); // 10s security timeout
 
   try {
     const response = await fetch('https://www.microsoft.com/releasecommunications/api/v1/m365', {
       signal: controller.signal
     });
+
     if (!response.ok) return [];
     const data = await response.json();
     // Take more items for better quarterly coverage (max 100)
@@ -198,9 +218,10 @@ const handleGemini = async (apiKey: string, systemInstruction: string, retryCoun
     return {
       timestamp: new Date().toISOString(),
       executiveSummary: parsedResponse.executiveSummary || "Summary of recent cloud service updates.",
-      keyUpdates: (parsedResponse.keyUpdates || []).map((u: any, i: number) => ({
+      keyUpdates: (parsedResponse.keyUpdates || []).map((u: any) => ({
         ...u,
-        id: `gemini-${i}-${Date.now()}`
+        // Stable ID based on content to prevent DOM churn on re-syncs if content is unchanged
+        id: `gemini-${(u.category + u.title + u.date).toLowerCase().replace(/[^a-z0-9]/g, '')}`
       })),
       sources: sources.length > 0 ? sources : [{ title: "Microsoft Updates", uri: "https://azure.microsoft.com/updates/" }]
     };
@@ -234,7 +255,7 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
   const timeoutId = setTimeout(() => controller.abort(), 10000);
 
   try {
-    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
+    const response = await fetchWithTimeout('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
       headers: {
         'Authorization': `Bearer ${apiKey}`,
@@ -272,9 +293,10 @@ const handleGroq = async (apiKey: string, systemInstruction: string, retryCount:
     return {
       timestamp: new Date().toISOString(),
       executiveSummary: parsedResponse.executiveSummary || "Summary of recent cloud service updates.",
-      keyUpdates: (parsedResponse.keyUpdates || []).map((u: any, i: number) => ({
+      keyUpdates: (parsedResponse.keyUpdates || []).map((u: any) => ({
         ...u,
-        id: `groq-${i}-${Date.now()}`
+        // Stable ID based on content to prevent DOM churn on re-syncs if content is unchanged
+        id: `groq-${(u.category + u.title + u.date).toLowerCase().replace(/[^a-z0-9]/g, '')}`
       })),
       sources: sources.length > 0 ? sources : [{ title: "M365 Official Roadmap", uri: "https://www.microsoft.com/microsoft-365/roadmap" }]
     };

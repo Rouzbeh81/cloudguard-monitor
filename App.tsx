@@ -1,5 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
+import { SpeedInsights } from '@vercel/speed-insights/react';
 import Header from './components/Header';
 import Dashboard from './components/Dashboard';
 import SummaryModal from './components/SummaryModal';
@@ -315,6 +316,7 @@ const App: React.FC = () => {
           }}
         />
       )}
+      <SpeedInsights />
     </div>
   );
 };
